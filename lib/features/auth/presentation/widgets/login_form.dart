@@ -253,7 +253,7 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
               
               SizedBox(height: isSmallScreen ? 20 : 30),
               
-              // Error message
+              // Success/Error messages
               if (authProvider.state == AuthState.error)
                 FadeTransition(
                   opacity: _formFadeAnimation,
@@ -279,6 +279,68 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
+              
+              if (authProvider.state == AuthState.authenticated)
+                FadeTransition(
+                  opacity: _formFadeAnimation,
+                  child: Container(
+                    margin: EdgeInsets.only(bottom: isSmallScreen ? 20 : 30),
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6F7E6),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF4CAF50),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      'Login successful! Welcome back.',
+                      style: TextStyle(
+                        color: const Color(0xFF2E7D32),
+                        fontSize: isSmallScreen ? 12 : 14,
+                        fontFamily: 'Poppins',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              
+              // Info message about demo credentials
+              FadeTransition(
+                opacity: _formFadeAnimation,
+                child: Container(
+                  margin: EdgeInsets.only(bottom: isSmallScreen ? 20 : 30),
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF2196F3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: const Color(0xFF1976D2),
+                        size: isSmallScreen ? 16 : 18,
+                      ),
+                      SizedBox(height: isSmallScreen ? 4 : 6),
+                      Text(
+                        'Demo Mode: Any valid email and password will work.\nThe app uses test credentials for API authentication.',
+                        style: TextStyle(
+                          color: const Color(0xFF1976D2),
+                          fontSize: isSmallScreen ? 10 : 12,
+                          fontFamily: 'Poppins',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               
               // Flexible spacing instead of Spacer to prevent overflow
               if (!isKeyboardOpen) ...[
