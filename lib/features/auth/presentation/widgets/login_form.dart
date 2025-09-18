@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import 'minimal_text_field.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -15,11 +15,15 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFieldKey = GlobalKey<MinimalTextFieldState>();
+  final _passwordFieldKey = GlobalKey<MinimalTextFieldState>();
   
   late AnimationController _titleController;
   late AnimationController _formController;
+  late AnimationController _buttonController;
   late Animation<Offset> _titleSlideAnimation;
   late Animation<double> _formFadeAnimation;
+  late Animation<double> _buttonScaleAnimation;
 
   @override
   void initState() {
@@ -30,17 +34,22 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
 
   void _initializeAnimations() {
     _titleController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
 
     _formController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _buttonController = AnimationController(
+      duration: const Duration(milliseconds: 200),
       vsync: this,
     );
 
     _titleSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, -0.3),
+      begin: const Offset(0, -0.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _titleController,
@@ -54,14 +63,22 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
       parent: _formController,
       curve: Curves.easeInOut,
     ));
+
+    _buttonScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _buttonController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   void _startAnimations() {
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 500), () {
       _titleController.forward();
     });
     
-    Future.delayed(const Duration(milliseconds: 600), () {
+    Future.delayed(const Duration(milliseconds: 800), () {
       _formController.forward();
     });
   }
@@ -70,6 +87,7 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
   void dispose() {
     _titleController.dispose();
     _formController.dispose();
+    _buttonController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -77,31 +95,72 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final isKeyboardOpen = keyboardHeight > 0;
+    
+    // Responsive calculations
+    final isSmallScreen = screenHeight < 600;
+    final isTablet = screenWidth > 600;
+    
+    // Dynamic spacing based on screen size and keyboard state
+    final topSpacing = isKeyboardOpen 
+        ? (isSmallScreen ? 20.0 : 30.0)
+        : (isSmallScreen ? 30.0 : 40.0);
+    
+    final titleSpacing = isKeyboardOpen
+        ? (isSmallScreen ? 30.0 : 40.0)
+        : (isSmallScreen ? 40.0 : 50.0);
+    
+    final buttonSpacing = isKeyboardOpen
+        ? (isSmallScreen ? 25.0 : 30.0)
+        : (isSmallScreen ? 30.0 : 40.0);
+    
+    final titleFontSize = isTablet ? 26.0 : (isSmallScreen ? 18.0 : 22.0);
+    
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         return Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 30), // Reduced spacing
+              SizedBox(height: topSpacing),
               
               // Title
               SlideTransition(
                 position: _titleSlideAnimation,
-                child: Text(
-                  AppStrings.loginTitle,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
-                    fontSize: 24, // Slightly smaller font
-                  ),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Login Or Register To Book',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: const Color(0xFF333333),
+                        fontWeight: FontWeight.w600,
+                        fontSize: titleFontSize,
+                        height: 1.2,
+                      ),
+                    ),
+                    Text(
+                      'Your Appointments',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: const Color(0xFF333333),
+                        fontWeight: FontWeight.w600,
+                        fontSize: titleFontSize,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               
-              const SizedBox(height: 40), // Reduced spacing
+              SizedBox(height: titleSpacing),
               
               // Form Fields
               FadeTransition(
@@ -110,203 +169,164 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Email field
-                    Text(
-                      AppStrings.emailLabel,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: const Color(0xFFF5F5F5),
-                      ),
-                      child: TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: _validateEmail,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: AppColors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: AppStrings.emailHint,
-                          hintStyle: TextStyle(
-                            color: AppColors.textHint.withOpacity(0.7),
-                            fontSize: 16,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
-                          ),
-                        ),
-                      ),
+                    MinimalTextField(
+                      key: _emailFieldKey,
+                      controller: _emailController,
+                      hintText: 'Enter your email',
+                      keyboardType: TextInputType.emailAddress,
+                      validator: _validateEmail,
                     ),
                     
-                    const SizedBox(height: 24),
+                    SizedBox(height: isSmallScreen ? 20 : 24),
                     
                     // Password field
-                    Text(
-                      AppStrings.passwordLabel,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: const Color(0xFFF5F5F5),
-                      ),
-                      child: TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        validator: _validatePassword,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: AppColors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: AppStrings.passwordHint,
-                          hintStyle: TextStyle(
-                            color: AppColors.textHint.withOpacity(0.7),
-                            fontSize: 16,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
-                          ),
-                        ),
-                      ),
+                    MinimalTextField(
+                      key: _passwordFieldKey,
+                      controller: _passwordController,
+                      hintText: 'Enter password',
+                      obscureText: true,
+                      validator: _validatePassword,
                     ),
                   ],
                 ),
               ),
               
-              const SizedBox(height: 30), // Reduced spacing
+              SizedBox(height: buttonSpacing),
               
               // Login Button
               FadeTransition(
                 opacity: _formFadeAnimation,
-                child: Container(
-                  width: double.infinity,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: const LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [AppColors.primary, AppColors.primaryDark],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                child: AnimatedBuilder(
+                  animation: _buttonScaleAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _buttonScaleAnimation.value,
+                      child: Container(
+                        width: double.infinity,
+                        height: isSmallScreen ? 52 : 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: const Color(0xFF3D704D),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF3D704D).withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: authProvider.isLoading ? null : _handleSubmit,
+                            onTapDown: (_) => _buttonController.forward(),
+                            onTapUp: (_) => _buttonController.reverse(),
+                            onTapCancel: () => _buttonController.reverse(),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Center(
+                              child: authProvider.isLoading
+                                  ? SizedBox(
+                                      height: isSmallScreen ? 20 : 24,
+                                      width: isSmallScreen ? 20 : 24,
+                                      child: const CircularProgressIndicator(
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Login',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 16 : 18,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: authProvider.isLoading ? null : _handleSubmit,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Center(
-                        child: authProvider.isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                AppStrings.loginButton,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
               
-              const SizedBox(height: 20), // Reduced spacing
+              SizedBox(height: isSmallScreen ? 20 : 30),
               
               // Error message
               if (authProvider.state == AuthState.error)
                 FadeTransition(
                   opacity: _formFadeAnimation,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    margin: EdgeInsets.only(bottom: isSmallScreen ? 20 : 30),
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFFFE6E6),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.error.withOpacity(0.3),
+                        color: const Color(0xFFFF6B6B),
+                        width: 1,
                       ),
                     ),
                     child: Text(
                       authProvider.errorMessage,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.error,
+                      style: TextStyle(
+                        color: const Color(0xFFD63031),
+                        fontSize: isSmallScreen ? 12 : 14,
+                        fontFamily: 'Poppins',
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 ),
               
-              const Spacer(), // Use spacer to push terms to bottom
-              
-              // Terms and conditions
-              FadeTransition(
-                opacity: _formFadeAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.5,
-                        fontSize: 13,
+              // Flexible spacing instead of Spacer to prevent overflow
+              if (!isKeyboardOpen) ...[
+                SizedBox(height: isSmallScreen ? 20 : 40),
+                
+                // Terms and conditions
+                FadeTransition(
+                  opacity: _formFadeAnimation,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: isTablet ? 16.0 : 8.0),
+                    child: RichText(
+                      textAlign: TextAlign.left,
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          color: const Color(0xFF333333),
+                          fontSize: isSmallScreen ? 10 : (isTablet ? 14 : 12),
+                          height: 1.5,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        children: [
+                          const TextSpan(text: 'By creating or logging into an account you are agreeing\nwith our '),
+                          const TextSpan(
+                            text: 'Terms and Conditions',
+                            style: TextStyle(
+                              color: Color(0xFF0028FC),
+                              fontWeight: FontWeight.w400,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const TextSpan(text: ' and '),
+                          const TextSpan(
+                            text: 'Privacy Policy',
+                            style: TextStyle(
+                              color: Color(0xFF0028FC),
+                              fontWeight: FontWeight.w400,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
                       ),
-                      children: [
-                        const TextSpan(text: AppStrings.termsText),
-                        TextSpan(
-                          text: AppStrings.termsAndConditions,
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const TextSpan(text: AppStrings.andText),
-                        TextSpan(
-                          text: AppStrings.privacyPolicy,
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const TextSpan(text: '.'),
-                      ],
                     ),
                   ),
                 ),
-              ),
+              ],
               
-              const SizedBox(height: 20), // Reduced bottom spacing
+              SizedBox(height: isKeyboardOpen ? 20 : 30),
             ],
           ),
         );
@@ -335,7 +355,11 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
   }
 
   void _handleSubmit() {
-    if (_formKey.currentState?.validate() ?? false) {
+    // Validate both fields using their keys
+    final emailValid = _emailFieldKey.currentState?.validate() ?? false;
+    final passwordValid = _passwordFieldKey.currentState?.validate() ?? false;
+    
+    if (emailValid && passwordValid) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final email = _emailController.text.trim();
       final password = _passwordController.text;
@@ -346,6 +370,6 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
         authProvider.register(email, password);
       }
     }
+    // If validation fails, the MinimalTextField will automatically show errors
   }
 }
-
