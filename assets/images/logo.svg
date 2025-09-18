@@ -1,0 +1,52 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lightGreenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8BC34A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#689F38;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer Circle -->
+  <circle cx="60" cy="60" r="58" stroke="url(#lightGreenGradient)" stroke-width="2" fill="none"/>
+  
+  <!-- Flower Petals -->
+  <!-- Top Petal -->
+  <path d="M60 15 C45 15, 35 25, 35 40 C35 50, 45 60, 60 60 C75 60, 85 50, 85 40 C85 25, 75 15, 60 15 Z" fill="url(#greenGradient)" opacity="0.8"/>
+  
+  <!-- Top Right Petal -->
+  <path d="M85 35 C100 20, 110 30, 105 45 C100 55, 90 65, 75 65 C65 65, 55 55, 60 40 C65 25, 75 15, 85 35 Z" fill="url(#lightGreenGradient)" opacity="0.7"/>
+  
+  <!-- Bottom Right Petal -->
+  <path d="M85 85 C100 100, 90 110, 75 105 C65 100, 55 90, 55 75 C55 65, 65 55, 80 60 C95 65, 105 75, 85 85 Z" fill="url(#greenGradient)" opacity="0.8"/>
+  
+  <!-- Bottom Petal -->
+  <path d="M60 105 C75 105, 85 95, 85 80 C85 70, 75 60, 60 60 C45 60, 35 70, 35 80 C35 95, 45 105, 60 105 Z" fill="url(#lightGreenGradient)" opacity="0.7"/>
+  
+  <!-- Bottom Left Petal -->
+  <path d="M35 85 C20 100, 10 90, 15 75 C20 65, 30 55, 45 55 C55 55, 65 65, 60 80 C55 95, 45 105, 35 85 Z" fill="url(#greenGradient)" opacity="0.8"/>
+  
+  <!-- Top Left Petal -->
+  <path d="M35 35 C20 20, 30 10, 45 15 C55 20, 65 30, 65 45 C65 55, 55 65, 40 60 C25 55, 15 45, 35 35 Z" fill="url(#lightGreenGradient)" opacity="0.7"/>
+  
+  <!-- Center Medical Symbol -->
+  <g transform="translate(60, 60)">
+    <!-- Caduceus Staff -->
+    <line x1="0" y1="-25" x2="0" y2="25" stroke="url(#greenGradient)" stroke-width="3"/>
+    
+    <!-- Snake 1 -->
+    <path d="M-8,-20 Q8,-15 -8,-10 Q8,-5 -8,0 Q8,5 -8,10 Q8,15 -8,20" 
+          stroke="url(#greenGradient)" stroke-width="2" fill="none"/>
+    
+    <!-- Snake 2 -->
+    <path d="M8,-20 Q-8,-15 8,-10 Q-8,-5 8,0 Q-8,5 8,10 Q-8,15 8,20" 
+          stroke="url(#lightGreenGradient)" stroke-width="2" fill="none"/>
+    
+    <!-- Wings -->
+    <path d="M-15,-22 Q-25,-25 -20,-15 Q-15,-18 -10,-20" fill="url(#lightGreenGradient)"/>
+    <path d="M15,-22 Q25,-25 20,-15 Q15,-18 10,-20" fill="url(#lightGreenGradient)"/>
+  </g>
+</svg>
