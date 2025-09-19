@@ -10,6 +10,10 @@ class PatientProvider with ChangeNotifier {
   String _errorMessage = '';
   String _searchQuery = '';
   String _sortOption = 'Date';
+  
+  // Cache management
+  DateTime? _lastFetchTime;
+  static const Duration _cacheValidityDuration = Duration(minutes: 5);
 
   // Getters
   List<PatientModel> get patients => _patients;
@@ -21,10 +25,20 @@ class PatientProvider with ChangeNotifier {
   String get sortOption => _sortOption;
   bool get hasPatients => _patients.isNotEmpty;
   bool get hasError => _errorMessage.isNotEmpty;
+  bool get isDataFresh => _lastFetchTime != null && 
+      DateTime.now().difference(_lastFetchTime!) < _cacheValidityDuration;
 
   // Load patients from API
   Future<bool> loadPatients() async {
     if (_isRefreshing) return false; // Prevent multiple simultaneous loads
+    
+    // Return cached data if fresh
+    if (isDataFresh && hasPatients && !_isLoading) {
+      if (kDebugMode) {
+        print('PatientProvider: Using cached data, skipping API call');
+      }
+      return true;
+    }
     
     _setLoading(true);
     _clearError();
@@ -45,6 +59,9 @@ class PatientProvider with ChangeNotifier {
         _patients = patientData
             .map((json) => PatientModel.fromJson(json as Map<String, dynamic>))
             .toList();
+        
+        // Update cache timestamp
+        _lastFetchTime = DateTime.now();
         
         if (kDebugMode) {
           print('PatientProvider: Loaded ${_patients.length} patients');
@@ -95,6 +112,9 @@ class PatientProvider with ChangeNotifier {
             .map((json) => PatientModel.fromJson(json as Map<String, dynamic>))
             .toList();
         
+        // Update cache timestamp
+        _lastFetchTime = DateTime.now();
+        
         if (kDebugMode) {
           print('PatientProvider: Refreshed ${_patients.length} patients');
         }
@@ -141,37 +161,36 @@ class PatientProvider with ChangeNotifier {
 
   // Apply filters and sorting
   void _applyFiltersAndSort() {
-    // Apply search filter
+    // Apply search filter with optimized performance
     if (_searchQuery.isEmpty) {
       _filteredPatients = List.from(_patients);
     } else {
-      _filteredPatients = _patients
-          .where((patient) =>
-              patient.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              patient.packageDescription
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()) ||
-              patient.assignedPerson
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()))
-          .toList();
+      final query = _searchQuery.toLowerCase();
+      _filteredPatients = _patients.where((patient) {
+        return patient.name.toLowerCase().contains(query) ||
+               patient.packageDescription.toLowerCase().contains(query) ||
+               patient.assignedPerson.toLowerCase().contains(query);
+      }).toList();
     }
 
-    // Apply sorting
+    // Apply sorting with optimized comparison
     _filteredPatients.sort((a, b) {
       switch (_sortOption) {
         case 'Date':
           return b.date.compareTo(a.date); // Newest first
         case 'Name':
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case 'Package':
-          return a.packageDescription
-              .toLowerCase()
-              .compareTo(b.packageDescription.toLowerCase());
+        case 'Amount':
+          // Sort by total amount if available
+          final aAmount = double.tryParse(a.totalAmount ?? '0') ?? 0.0;
+          final bAmount = double.tryParse(b.totalAmount ?? '0') ?? 0.0;
+          return bAmount.compareTo(aAmount); // Highest first
         default:
           return 0;
       }
     });
+    
+    notifyListeners();
   }
 
   // Private helper methods
@@ -204,6 +223,7 @@ class PatientProvider with ChangeNotifier {
     _isLoading = false;
     _isRefreshing = false;
     _errorMessage = '';
+    _lastFetchTime = null; // Clear cache timestamp
     notifyListeners();
   }
 }

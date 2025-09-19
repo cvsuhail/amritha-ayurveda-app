@@ -264,6 +264,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                 )
               : DropdownButtonHideUnderline(
                   child: DropdownButton<Treatment>(
+                    isExpanded: true,
                     value: _selectedTreatment,
                     hint: const Text(
                       'Choose preferred treatment',
@@ -272,16 +273,22 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                         fontSize: 14,
                         color: Color(0xFF999999),
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     items: _treatments.map((Treatment treatment) {
                       return DropdownMenuItem<Treatment>(
                         value: treatment,
-                        child: Text(
-                          treatment.name,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            color: Color(0xFF333333),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            treatment.name,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              color: Color(0xFF333333),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                       );

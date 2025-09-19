@@ -224,88 +224,148 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/back.png',
-            width: 24,
-            height: 24,
-            color: const Color(0xFF333333),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Register',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            color: const Color(0xFF333333),
-            fontSize: isTablet ? 24 : 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Image.asset(
-              'assets/icons/notificaion.png',
-              width: 24,
-              height: 24,
-              color: const Color(0xFF333333),
+      body: SafeArea(
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Column(
+              children: [
+                // Custom App Bar with Divider
+                _buildAppBar(isTablet),
+                
+                // Form Content
+                Expanded(
+                  child: Form(
+                    key: _formKey,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isTablet ? 32.0 : 20.0,
+                        vertical: 16.0,
+                      ),
+                      child: AnimatedBuilder(
+                        animation: _staggerAnimation,
+                        builder: (context, child) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildAnimatedSection(_buildBasicInfoSection(), 0),
+                              const SizedBox(height: 24),
+                              _buildAnimatedSection(_buildLocationSection(), 1),
+                              const SizedBox(height: 24),
+                              _buildAnimatedSection(_buildTreatmentsSection(), 2),
+                              const SizedBox(height: 24),
+                              _buildAnimatedSection(_buildAmountSection(), 3),
+                              const SizedBox(height: 24),
+                              _buildAnimatedSection(_buildPaymentSection(), 4),
+                              const SizedBox(height: 24),
+                              _buildAnimatedSection(_buildDateTimeSection(), 5),
+                              const SizedBox(height: 32),
+                              _buildAnimatedSection(_buildSaveButton(), 6),
+                              const SizedBox(height: 32),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            onPressed: () {
-              // Handle notifications
-            },
           ),
-        ],
+        ),
       ),
-      body: SlideTransition(
-        position: _slideAnimation,
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isTablet ? 32.0 : 20.0,
-                vertical: 16.0,
+    );
+  }
+
+  Widget _buildAppBar(bool isTablet) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Row(
+            children: [
+              // Back Button - exactly like the UI
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: const Color(0xFF333333),
+                      size: 24,
+                    ),
+                  ),
+                ),
               ),
-              child: AnimatedBuilder(
-                animation: _staggerAnimation,
-                builder: (context, child) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildAnimatedSection(_buildBasicInfoSection(), 0),
-                      const SizedBox(height: 24),
-                      _buildAnimatedSection(_buildLocationSection(), 1),
-                      const SizedBox(height: 24),
-                      _buildAnimatedSection(_buildTreatmentsSection(), 2),
-                      const SizedBox(height: 24),
-                      _buildAnimatedSection(_buildAmountSection(), 3),
-                      const SizedBox(height: 24),
-                      _buildAnimatedSection(_buildPaymentSection(), 4),
-                      const SizedBox(height: 24),
-                      _buildAnimatedSection(_buildDateTimeSection(), 5),
-                      const SizedBox(height: 32),
-                      _buildAnimatedSection(_buildSaveButton(), 6),
-                      const SizedBox(height: 16),
-                      // Debug connectivity test button (only in debug mode)
-                      if (kDebugMode) ...[
-                        _buildAnimatedSection(_buildDebugButton(), 7),
-                        const SizedBox(height: 8),
-                        _buildAnimatedSection(_buildEndpointTestButton(), 8),
-                        const SizedBox(height: 16),
-                      ],
-                      const SizedBox(height: 20),
-                    ],
+              
+              const Spacer(),
+              
+              // Notification Button - exactly like the UI
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No new notifications'),
+                      backgroundColor: Color(0xFF3D704D),
+                      behavior: SnackBarBehavior.floating,
+                      margin: EdgeInsets.all(16),
+                    ),
                   );
                 },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/icons/notificaion.png',
+                      width: 20,
+                      height: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Title Section
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Register',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                color: const Color(0xFF333333),
+                fontSize: isTablet ? 28 : 24,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
               ),
             ),
           ),
         ),
-      ),
+        
+        // Divider - exactly like the UI
+        Container(
+          height: 1,
+          width: double.infinity,
+          color: const Color(0xFFE0E0E0),
+        ),
+      ],
     );
   }
 
@@ -454,153 +514,113 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
     final isTablet = screenWidth > 600;
-    final isMobile = screenWidth < 480;
     
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutCubic,
+    return Container(
       padding: EdgeInsets.all(isTablet ? 20 : 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF3D704D).withOpacity(0.1),
-          width: 1,
-        ),
+        color: const Color(0xFFF8F9FA), // Light gray background
+        borderRadius: BorderRadius.circular(20), // Significantly rounded corners
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3D704D).withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.04),
-            blurRadius: 6,
+            color: Colors.black.withOpacity(0.05), // Subtle shadow
+            blurRadius: 8,
             offset: const Offset(0, 2),
             spreadRadius: 0,
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header row with number and actions
-          Row(
-            children: [
-              Container(
-                width: isTablet ? 32 : 28,
-                height: isTablet ? 32 : 28,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF3D704D), Color(0xFF2A5A3A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          // Left side - Treatment content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Treatment name with numbering
+                Text(
+                  '${index + 1}. ${treatment.name}',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: isTablet ? 16 : 15,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF333333),
+                    height: 1.2,
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF3D704D).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Gender counters in horizontal layout
+                Row(
+                  children: [
+                    _buildGenderCounter('Male', treatment.maleCount, (count) {
+                      setState(() => treatment.maleCount = count);
+                    }),
+                    const SizedBox(width: 24),
+                    _buildGenderCounter('Female', treatment.femaleCount, (count) {
+                      setState(() => treatment.femaleCount = count);
+                    }),
                   ],
                 ),
-                child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: isTablet ? 14 : 12,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'Poppins',
-                    ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Right side - Action icons
+          Column(
+            children: [
+              // Delete icon (red circle with X)
+              GestureDetector(
+                onTap: () {
+                  setState(() => _treatments.removeAt(index));
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF6B6B),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 16,
                   ),
                 ),
               ),
-              const Spacer(),
-              // Action buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildActionButton(
-                    icon: Icons.edit_outlined,
+              
+              const SizedBox(height: 8),
+              
+              // Edit icon (green pencil)
+              GestureDetector(
+                onTap: () => _editTreatment(index),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
                     color: const Color(0xFF3D704D),
-                    onTap: () => _editTreatment(index),
+                    shape: BoxShape.circle,
                   ),
-                  if (_treatments.length > 1) ...[
-                    const SizedBox(width: 8),
-                    _buildActionButton(
-                      icon: Icons.close,
-                      color: const Color(0xFFFF6B6B),
-                      onTap: () {
-                        setState(() => _treatments.removeAt(index));
-                      },
-                    ),
-                  ],
-                ],
+                  child: const Icon(
+                    Icons.edit,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
               ),
             ],
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Treatment name
-          Text(
-            treatment.name,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: isTablet ? 16 : 15,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF333333),
-              height: 1.3,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Gender counters
-          if (isMobile)
-            Column(
-              children: [
-                _buildGenderCounter('Male', treatment.maleCount, (count) {
-                  setState(() => treatment.maleCount = count);
-                }),
-                const SizedBox(height: 12),
-                _buildGenderCounter('Female', treatment.femaleCount, (count) {
-                  setState(() => treatment.femaleCount = count);
-                }),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: _buildGenderCounter('Male', treatment.maleCount, (count) {
-                    setState(() => treatment.maleCount = count);
-                  }),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildGenderCounter('Female', treatment.femaleCount, (count) {
-                    setState(() => treatment.femaleCount = count);
-                  }),
-                ),
-              ],
-            ),
         ],
       ),
     );
   }
 
   Widget _buildGenderCounter(String gender, int count, Function(int) onChanged) {
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final isMobile = screenWidth < 480;
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -610,203 +630,63 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
             fontFamily: 'Poppins',
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF666666),
+            color: Color(0xFF3D704D), // Green color as shown in image
             letterSpacing: 0.3,
           ),
         ),
         const SizedBox(height: 8),
         Container(
+          width: 60,
+          height: 32,
           decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFF3D704D).withOpacity(0.15),
-              width: 1,
-            ),
+            color: const Color(0xFFF0F0F0), // Light gray box
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
-            mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
-            children: [
-              _buildCounterButton(
-                icon: Icons.remove,
-                onTap: () => count > 0 ? onChanged(count - 1) : null,
-                isEnabled: count > 0,
-                isLeft: true,
+          child: Center(
+            child: Text(
+              count.toString(),
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF333333),
               ),
-              Container(
-                width: isMobile ? null : 40,
-                constraints: isMobile ? const BoxConstraints(minWidth: 40) : null,
-                height: 36,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                ),
-                child: Center(
-                  child: Text(
-                    count.toString(),
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                ),
-              ),
-              _buildCounterButton(
-                icon: Icons.add,
-                onTap: () => onChanged(count + 1),
-                isEnabled: true,
-                isLeft: false,
-              ),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 16,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCounterButton({
-    required IconData icon,
-    required VoidCallback? onTap,
-    required bool isEnabled,
-    required bool isLeft,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isEnabled ? onTap : null,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(isLeft ? 12 : 0),
-          bottomLeft: Radius.circular(isLeft ? 12 : 0),
-          topRight: Radius.circular(isLeft ? 0 : 12),
-          bottomRight: Radius.circular(isLeft ? 0 : 12),
-        ),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: isEnabled 
-                ? const Color(0xFF3D704D).withOpacity(0.1)
-                : const Color(0xFFF0F0F0),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(isLeft ? 12 : 0),
-              bottomLeft: Radius.circular(isLeft ? 12 : 0),
-              topRight: Radius.circular(isLeft ? 0 : 12),
-              bottomRight: Radius.circular(isLeft ? 0 : 12),
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: isEnabled 
-                ? const Color(0xFF3D704D)
-                : const Color(0xFFCCCCCC),
-            size: 18,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildAddTreatmentButton() {
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
     final isTablet = screenWidth > 600;
     
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _addTreatment,
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            vertical: isTablet ? 16 : 14,
-            horizontal: 20,
-          ),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF3D704D).withOpacity(0.08),
-                const Color(0xFF3D704D).withOpacity(0.12),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E8), // Light green background
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _addTreatment,
+          borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: Text(
+              '+ Add Treatments',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: isTablet ? 16 : 15,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF333333), // Dark gray text
+                letterSpacing: 0.3,
+              ),
             ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF3D704D).withOpacity(0.2),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF3D704D).withOpacity(0.1),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3D704D).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.add,
-                  color: Color(0xFF3D704D),
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Add Treatment',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: isTablet ? 16 : 15,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF3D704D),
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -1119,71 +999,6 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     );
   }
 
-  Widget _buildDebugButton() {
-    return Container(
-      width: double.infinity,
-      height: 48,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.orange.withOpacity(0.1),
-        border: Border.all(
-          color: Colors.orange.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _testConnectivity,
-          borderRadius: BorderRadius.circular(12),
-          child: const Center(
-            child: Text(
-              'Test API Connectivity (Debug)',
-              style: TextStyle(
-                color: Colors.orange,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEndpointTestButton() {
-    return Container(
-      width: double.infinity,
-      height: 48,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.blue.withOpacity(0.1),
-        border: Border.all(
-          color: Colors.blue.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _testEndpoints,
-          borderRadius: BorderRadius.circular(12),
-          child: const Center(
-            child: Text(
-              'Test Patient Endpoints (Debug)',
-              style: TextStyle(
-                color: Colors.blue,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSectionLabel(String text) {
     return Text(
@@ -1582,74 +1397,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     return branch.id.toString();
   }
 
-  void _testConnectivity() async {
-    if (kDebugMode) {
-      print('Testing API connectivity...');
-    }
-    
-    try {
-      final result = await ApiService.testConnectivity();
-      
-      if (mounted) {
-        if (result['success'] == true) {
-          _showSuccessSnackBar('✅ API connectivity test successful!');
-        } else {
-          _showErrorSnackBar('❌ Connectivity test failed: ${result['message']}');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackBar('❌ Connectivity test error: $e');
-      }
-    }
-  }
 
-  void _testEndpoints() async {
-    if (kDebugMode) {
-      print('Testing /PatientUpdate endpoint specifically...');
-    }
-    
-    try {
-      // Test the PatientUpdate endpoint specifically since it exists in Django URLs
-      final result = await ApiService.testEndpoint('/PatientUpdate', method: 'POST');
-      
-      if (mounted) {
-        final statusCode = result['statusCode'] ?? 'unknown';
-        final contentType = result['contentType'] ?? 'unknown';
-        final isJson = result['isJson'] ?? false;
-        
-        if (statusCode == 200) {
-          _showSuccessSnackBar('✅ /PatientUpdate: Works! ($statusCode - ${isJson ? 'JSON' : contentType})');
-        } else if (statusCode == 405) {
-          _showErrorSnackBar('⚠️ /PatientUpdate: Method Not Allowed (405) - Endpoint exists but doesn\'t accept POST');
-        } else if (statusCode == 400) {
-          _showErrorSnackBar('⚠️ /PatientUpdate: Bad Request (400) - Wrong data format');
-        } else if (statusCode == 422) {
-          _showErrorSnackBar('⚠️ /PatientUpdate: Unprocessable Entity (422) - Invalid data');
-        } else {
-          _showErrorSnackBar('⚠️ /PatientUpdate: $statusCode (${isJson ? 'JSON' : contentType})');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackBar('❌ /PatientUpdate: Error - $e');
-      }
-    }
-  }
-
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF3D704D),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
 
   void _handleSave() async {
     if (_isLoading) return;
