@@ -124,14 +124,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     // Dynamic top section height based on screen size and keyboard state
     double topSectionHeight;
     if (isKeyboardOpen) {
-      topSectionHeight = isSmallScreen ? screenHeight * 0.20 : screenHeight * 0.25;
+      topSectionHeight = isSmallScreen ? screenHeight * 0.10 : screenHeight * 0.15;
     } else {
       if (isSmallScreen) {
-        topSectionHeight = screenHeight * 0.30;
+        topSectionHeight = screenHeight * 0.10;
       } else if (isMediumScreen) {
-        topSectionHeight = screenHeight * 0.35;
+        topSectionHeight = screenHeight * 0.15;
       } else {
-        topSectionHeight = screenHeight * 0.40;
+        topSectionHeight = screenHeight * 0.10;
       }
     }
     
@@ -167,12 +167,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 curve: Curves.easeInOut,
-                                height: topSectionHeight,
+                                height: screenHeight * 0.30,
                                 width: double.infinity,
                                 decoration: const BoxDecoration(
                                   image: DecorationImage(
                                     image: AssetImage('assets/images/login-head-bg.png'),
-                                    fit: BoxFit.cover,
+                                    fit: BoxFit.fill,
                                   ),
                                 ),
                                 child: ClipRect(
@@ -195,8 +195,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                                   padding: EdgeInsets.all(isKeyboardOpen ? 10 : 20),
                                                   child: Image.asset(
                                                     'assets/images/login-logo.png',
-                                                    height: logoSize,
-                                                    width: logoSize,
+                                                    height: 80,
+                                                    width: 80,
                                                     fit: BoxFit.contain,
                                                   ),
                                                 ),

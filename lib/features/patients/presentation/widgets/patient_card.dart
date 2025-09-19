@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/models/patient_model.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/services/pdf_service.dart';
 
 class PatientCard extends StatefulWidget {
   final PatientModel patient;
@@ -24,6 +25,7 @@ class PatientCard extends StatefulWidget {
 }
 
 class _PatientCardState extends State<PatientCard> {
+  bool _isDownloadingPdf = false;
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -82,6 +84,86 @@ class _PatientCardState extends State<PatientCard> {
   void _onViewDetailsPressed() {
     HapticFeedback.mediumImpact();
     widget.onViewDetails();
+  }
+
+  Future<void> _downloadPrescription() async {
+    if (_isDownloadingPdf) return;
+
+    setState(() => _isDownloadingPdf = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      // Prepare patient data for PDF generation
+      final pdfData = {
+        'name': widget.patient.name,
+        'phone': widget.patient.phone ?? widget.patient.whatsapp ?? '',
+        'address': widget.patient.address ?? '',
+        'totalAmount': widget.patient.totalAmount ?? '0',
+        'discountAmount': widget.patient.discountAmount ?? '0',
+        'advanceAmount': widget.patient.advanceAmount ?? '0',
+        'balanceAmount': widget.patient.balanceAmount ?? '0',
+        'dateNdTime': widget.patient.date.toIso8601String(),
+        'branch': 'Kumarakom', // Default branch
+        'executive': widget.patient.assignedPerson,
+        'payment': 'Cash', // Default payment method
+        'treatments': [
+          {
+            'id': 1,
+            'name': widget.patient.packageDescription,
+            'maleCount': 1,
+            'femaleCount': 0,
+          }
+        ],
+      };
+
+      await PdfService.generateAndDownloadPatientPdf(pdfData);
+      
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Prescription downloaded successfully!'),
+              ],
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        HapticFeedback.selectionClick();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Failed to download prescription: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloadingPdf = false);
+      }
+    }
   }
 
   @override
@@ -302,6 +384,51 @@ class _PatientCardState extends State<PatientCard> {
                                   Icons.account_balance_outlined,
                                 ),
                             ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Download Prescription Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _isDownloadingPdf ? null : _downloadPrescription,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: _isDownloadingPdf
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.download, size: 18),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Download Prescription',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Poppins',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                           ),
                         ),
                       ],

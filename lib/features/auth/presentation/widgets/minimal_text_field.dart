@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 class MinimalTextField extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
+  final String? label;
   final TextInputType keyboardType;
   final bool obscureText;
   final String? Function(String?)? validator;
@@ -16,6 +17,7 @@ class MinimalTextField extends StatefulWidget {
     super.key,
     required this.controller,
     required this.hintText,
+    this.label,
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
     this.validator,
@@ -78,7 +80,22 @@ class MinimalTextFieldState extends State<MinimalTextField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Minimal Text Field Container
+        // Label
+        if (widget.label != null) ...[
+          Text(
+            widget.label!,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF333333),
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        
+        // Text Field Container
         Container(
           height: widget.maxLines != null && widget.maxLines! > 1 ? null : 56,
           constraints: widget.maxLines != null && widget.maxLines! > 1 
@@ -89,17 +106,22 @@ class MinimalTextFieldState extends State<MinimalTextField> {
             color: const Color(0xFFF5F5F5),
             border: _isFocused
                 ? Border.all(
-                    color: const Color(0xFF3D704D),
-                    width: 1.5,
+                    color: const Color(0xFF006837),
+                    width: 2.0,
                   )
                 : _hasError
                     ? Border.all(
-                        color: const Color(0xFFFF6B6B),
-                        width: 1.5,
+                        color: const Color(0xFFE53E3E),
+                        width: 2.0,
                       )
-                    : null,
+                    : Border.all(
+                        color: Colors.transparent,
+                        width: 2.0,
+                      ),
           ),
-          child: TextFormField(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: TextFormField(
             controller: widget.controller,
             focusNode: _focusNode,
             keyboardType: widget.keyboardType,
@@ -112,7 +134,7 @@ class MinimalTextFieldState extends State<MinimalTextField> {
                 ? TextAlignVertical.top 
                 : TextAlignVertical.center,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 14,
               color: Color(0xFF333333),
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w400,
@@ -120,21 +142,27 @@ class MinimalTextFieldState extends State<MinimalTextField> {
             ),
             decoration: InputDecoration(
               hintText: widget.hintText,
-              hintStyle: TextStyle(
-                color: const Color(0xFF999999).withOpacity(0.8),
-                fontSize: 16,
+              hintStyle: const TextStyle(
+                color: Color(0xFF9E9E9E),
+                fontSize: 14,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w400,
                 height: 1.4,
               ),
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              focusedErrorBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 16,
+                vertical: 18,
               ),
               isDense: true,
             ),
             validator: null, // Handle validation manually
+            ),
           ),
         ),
         
@@ -145,7 +173,7 @@ class MinimalTextFieldState extends State<MinimalTextField> {
             child: Text(
               _errorText!,
               style: const TextStyle(
-                color: Color(0xFFFF6B6B),
+                color: Color(0xFFE53E3E),
                 fontSize: 12,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w400,

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../widgets/minimal_text_field.dart';
 import '../widgets/add_treatment_modal.dart';
 import '../widgets/edit_treatment_modal.dart';
+import '../widgets/success_modal.dart';
 import '../../../../core/models/branch.dart';
 import '../../../../core/models/treatment.dart';
 import '../../../../core/services/api_service.dart';
@@ -1768,31 +1769,33 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           // Success haptic feedback
           HapticFeedback.lightImpact();
           
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('Patient registered successfully!')),
-                ],
-              ),
-              backgroundColor: const Color(0xFF3D704D),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
+          // Prepare patient data for PDF generation
+          final pdfData = {
+            'name': _nameController.text.trim(),
+            'executive': _getExecutiveName(),
+            'payment': _selectedPaymentOption,
+            'phone': _whatsappController.text.trim(),
+            'address': _addressController.text.trim(),
+            'totalAmount': _totalAmountController.text,
+            'discountAmount': _discountAmountController.text.isNotEmpty ? _discountAmountController.text : '0',
+            'advanceAmount': _advanceAmountController.text,
+            'balanceAmount': _balanceAmountController.text,
+            'dateNdTime': _formatDateTime(),
+            'branch': _selectedBranch,
+            'treatments': _treatments.map((t) => {
+              'id': t.id,
+              'name': t.name,
+              'maleCount': t.maleCount,
+              'femaleCount': t.femaleCount,
+            }).toList(),
+          };
           
-          // Navigate back after a short delay
-          Future.delayed(const Duration(milliseconds: 1500), () {
-            if (mounted) {
-              Navigator.pop(context, true); // Pass true to indicate success
-            }
-          });
+          // Stop loading before showing modal
+          setState(() => _isLoading = false);
+          
+          // Show success modal with PDF download option
+          showSuccessModal(context, pdfData);
+          return; // Early return to avoid executing finally block
         } else {
           // Handle API error
           final errorMessage = result['message'] ?? 'Failed to register patient. Please try again.';
