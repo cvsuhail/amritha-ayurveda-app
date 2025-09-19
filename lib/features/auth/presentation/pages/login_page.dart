@@ -115,30 +115,79 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     final screenWidth = mediaQuery.size.width;
     final keyboardHeight = mediaQuery.viewInsets.bottom;
     final isKeyboardOpen = keyboardHeight > 0;
+    final orientation = mediaQuery.orientation;
     
-    // Responsive calculations
-    final isSmallScreen = screenHeight < 600;
-    final isMediumScreen = screenHeight >= 600 && screenHeight < 800;
-    final isTablet = screenWidth > 600;
+    // Enhanced responsive breakpoints
+    final isSmallPhone = screenHeight < 600 || (screenWidth < 360 && orientation == Orientation.portrait);
+    final isMediumPhone = screenHeight >= 600 && screenHeight < 700 && screenWidth < 400;
+    final isLargePhone = screenHeight >= 700 && screenHeight < 900 && screenWidth < 500;
+    final isSmallTablet = screenWidth >= 600 && screenWidth < 800;
+    final isLargeTablet = screenWidth >= 800 && screenWidth < 1200;
+    final isDesktop = screenWidth >= 1200;
+    final isLandscape = orientation == Orientation.landscape;
     
-    // Dynamic top section height based on screen size and keyboard state
+    // Dynamic calculations based on device type
+    double getResponsiveValue({
+      required double smallPhone,
+      required double mediumPhone,
+      required double largePhone,
+      required double smallTablet,
+      required double largeTablet,
+      required double desktop,
+    }) {
+      if (isDesktop) return desktop;
+      if (isLargeTablet) return largeTablet;
+      if (isSmallTablet) return smallTablet;
+      if (isLargePhone) return largePhone;
+      if (isMediumPhone) return mediumPhone;
+      return smallPhone;
+    }
+    
+    // Dynamic top section height based on screen size, orientation and keyboard state
     double topSectionHeight;
     if (isKeyboardOpen) {
-      topSectionHeight = isSmallScreen ? screenHeight * 0.10 : screenHeight * 0.15;
-    } else {
-      if (isSmallScreen) {
-        topSectionHeight = screenHeight * 0.10;
-      } else if (isMediumScreen) {
-        topSectionHeight = screenHeight * 0.15;
+      if (isLandscape) {
+        topSectionHeight = screenHeight * 0.08; // Minimal in landscape with keyboard
       } else {
-        topSectionHeight = screenHeight * 0.10;
+        topSectionHeight = getResponsiveValue(
+          smallPhone: screenHeight * 0.08,
+          mediumPhone: screenHeight * 0.10,
+          largePhone: screenHeight * 0.12,
+          smallTablet: screenHeight * 0.15,
+          largeTablet: screenHeight * 0.18,
+          desktop: screenHeight * 0.20,
+        );
+      }
+    } else {
+      if (isLandscape) {
+        topSectionHeight = screenHeight * 0.25; // Reasonable size in landscape
+      } else {
+        topSectionHeight = getResponsiveValue(
+          smallPhone: screenHeight * 0.28,
+          mediumPhone: screenHeight * 0.30,
+          largePhone: screenHeight * 0.32,
+          smallTablet: screenHeight * 0.35,
+          largeTablet: screenHeight * 0.38,
+          desktop: screenHeight * 0.40,
+        );
       }
     }
     
-    // Dynamic logo size
-    double logoSize = isTablet ? 140 : (isSmallScreen ? 80 : 120);
+    // Dynamic logo size with better scaling
+    double logoSize = getResponsiveValue(
+      smallPhone: 60.0,
+      mediumPhone: 70.0,
+      largePhone: 80.0,
+      smallTablet: 100.0,
+      largeTablet: 120.0,
+      desktop: 140.0,
+    );
+    
     if (isKeyboardOpen) {
-      logoSize *= 0.7; // Reduce logo size when keyboard is open
+      logoSize *= isLandscape ? 0.6 : 0.7;
+    }
+    if (isLandscape && !isKeyboardOpen) {
+      logoSize *= 0.8; // Slightly smaller in landscape
     }
 
     return ChangeNotifierProvider(
@@ -167,17 +216,21 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 curve: Curves.easeInOut,
-                                height: screenHeight * 0.30,
+                                height: topSectionHeight,
                                 width: double.infinity,
                                 decoration: const BoxDecoration(
                                   image: DecorationImage(
                                     image: AssetImage('assets/images/login-head-bg.png'),
-                                    fit: BoxFit.fill,
+                                    fit: BoxFit.cover, // Better scaling for different aspect ratios
+                                    alignment: Alignment.center,
                                   ),
                                 ),
                                 child: ClipRect(
                                   child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+                                    filter: ImageFilter.blur(
+                                      sigmaX: isLandscape ? 6.0 : 8.0, 
+                                      sigmaY: isLandscape ? 6.0 : 8.0
+                                    ),
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: Colors.black.withOpacity(0.1),
@@ -192,11 +245,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                                 angle: _logoRotationAnimation.value,
                                                 child: AnimatedContainer(
                                                   duration: const Duration(milliseconds: 300),
-                                                  padding: EdgeInsets.all(isKeyboardOpen ? 10 : 20),
+                                                  padding: EdgeInsets.all(
+                                                    getResponsiveValue(
+                                                      smallPhone: 8.0,
+                                                      mediumPhone: 12.0,
+                                                      largePhone: 16.0,
+                                                      smallTablet: 20.0,
+                                                      largeTablet: 24.0,
+                                                      desktop: 28.0,
+                                                    )
+                                                  ),
                                                   child: Image.asset(
                                                     'assets/images/login-logo.png',
-                                                    height: 80,
-                                                    width: 80,
+                                                    height: logoSize,
+                                                    width: logoSize,
                                                     fit: BoxFit.contain,
                                                   ),
                                                 ),
@@ -232,9 +294,25 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                     child: Padding(
                                       padding: EdgeInsets.symmetric(
-                                        horizontal: isTablet ? 48.0 : 24.0,
+                                        horizontal: getResponsiveValue(
+                                          smallPhone: 16.0,
+                                          mediumPhone: 20.0,
+                                          largePhone: 24.0,
+                                          smallTablet: 32.0,
+                                          largeTablet: 48.0,
+                                          desktop: 64.0,
+                                        ),
                                       ),
-                                      child: const LoginForm(),
+                                      child: LoginForm(
+                                        isSmallPhone: isSmallPhone,
+                                        isMediumPhone: isMediumPhone,
+                                        isLargePhone: isLargePhone,
+                                        isSmallTablet: isSmallTablet,
+                                        isLargeTablet: isLargeTablet,
+                                        isDesktop: isDesktop,
+                                        isLandscape: isLandscape,
+                                        getResponsiveValue: getResponsiveValue,
+                                      ),
                                     ),
                                   ),
                                 ),

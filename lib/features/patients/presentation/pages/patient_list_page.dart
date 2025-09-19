@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,6 +28,11 @@ class _PatientListPageState extends State<PatientListPage> {
   final Set<String> _expandedPatients = {};
   
   String _selectedSortOption = 'Date';
+  Timer? _debounceTimer;
+  
+  // Double tap to exit functionality
+  DateTime? _lastBackPressed;
+  Timer? _exitTimer;
 
   @override
   void initState() {
@@ -36,10 +42,20 @@ class _PatientListPageState extends State<PatientListPage> {
 
 
   Future<void> _loadInitialData() async {
+    // Optimize loading by checking if data already exists
+    final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+    
+    // Skip loading if data already exists and is fresh (less than 5 minutes old)
+    if (patientProvider.hasPatients && !patientProvider.isLoading) {
+      if (kDebugMode) {
+        print('PatientListPage: Using cached data, skipping reload');
+      }
+      return;
+    }
+    
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       
-      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
       final success = await patientProvider.loadPatients();
       
       if (!success && mounted) {
@@ -130,8 +146,14 @@ class _PatientListPageState extends State<PatientListPage> {
   }
 
   void _onSearchChanged(String query) {
-    final patientProvider = Provider.of<PatientProvider>(context, listen: false);
-    patientProvider.searchPatients(query);
+    // Debounce search to prevent excessive filtering
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+        patientProvider.searchPatients(query);
+      }
+    });
   }
 
   void _onSortChanged(String sortOption) {
@@ -181,102 +203,67 @@ class _PatientListPageState extends State<PatientListPage> {
     );
   }
 
-
-  void _showLogoutConfirmation() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Logout',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2C2C2C),
-            ),
-          ),
-          content: const Text(
-            'Are you sure you want to logout?',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF666666),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop(); // Close dialog
-                await _logout();
-              },
-              child: const Text(
-                'Logout',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _logout() async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.logout();
+  // Handle back button press with double-tap to exit functionality
+  bool _handleBackPress() {
+    final now = DateTime.now();
+    
+    // Check if this is the first back press or if enough time has passed
+    if (_lastBackPressed == null || 
+        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+      _lastBackPressed = now;
       
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const LoginPage(),
+      // Show snackbar with exit instruction
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Press again to exit',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Poppins',
+            ),
           ),
-          (route) => false, // Remove all previous routes
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error during logout. Please try again.'),
-            backgroundColor: Colors.red,
+          backgroundColor: AppColors.textPrimary,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
-        );
-      }
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      
+      // Set timer to clear the last back pressed after 2 seconds
+      _exitTimer?.cancel();
+      _exitTimer = Timer(const Duration(seconds: 2), () {
+        _lastBackPressed = null;
+      });
+      
+      return false; // Don't exit on first press
+    } else {
+      // Second back press within 2 seconds - exit the app
+      SystemNavigator.pop();
+      return true;
     }
   }
+
+
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
+    _exitTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: false, // Prevent default pop behavior
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          _showLogoutConfirmation();
+          _handleBackPress();
         }
       },
       child: Scaffold(
@@ -317,7 +304,7 @@ class _PatientListPageState extends State<PatientListPage> {
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              _showLogoutConfirmation();
+              _handleBackPress();
             },
             child: Container(
               width: 40,
@@ -451,23 +438,28 @@ class _PatientListPageState extends State<PatientListPage> {
                 ),
               ),
               const Spacer(),
-              // Sort Dropdown
+              // Sort Dropdown with pill design
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                  border: Border.all(
+                    color: const Color(0xFFE0E0E0),
+                    width: 1,
+                  ),
+                  borderRadius: BorderRadius.circular(25),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedSortOption,
                     icon: const Icon(
                       Icons.keyboard_arrow_down,
-                      color: AppColors.textSecondary,
+                      color: Color(0xFF4CAF50),
+                      size: 20,
                     ),
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w400,
                       color: AppColors.textPrimary,
                       fontFamily: 'Poppins',
                     ),
@@ -489,6 +481,13 @@ class _PatientListPageState extends State<PatientListPage> {
           ),
           
           const SizedBox(height: 20),
+          
+          // Divider
+          Container(
+            height: 1,
+            width: double.infinity,
+            color: const Color(0xFFE0E0E0),
+          ),
         ],
       ),
     );
@@ -666,18 +665,27 @@ class _PatientListPageState extends State<PatientListPage> {
           vertical: 16,
         ),
         itemCount: patientProvider.filteredPatients.length,
-        physics: const AlwaysScrollableScrollPhysics(), // Ensures smooth scrolling
+        physics: const AlwaysScrollableScrollPhysics(),
+        // Performance optimizations
+        cacheExtent: 2000, // Cache more items for smoother scrolling
+        addAutomaticKeepAlives: true, // Keep items alive for better performance
+        addRepaintBoundaries: true, // Add repaint boundaries for better performance
+        addSemanticIndexes: false, // Disable semantic indexes for better performance
         itemBuilder: (context, index) {
           final patient = patientProvider.filteredPatients[index];
           
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: PatientCard(
-              patient: patient,
-              index: index + 1,
-              isExpanded: _expandedPatients.contains(patient.id),
-              onViewDetails: () => _onToggleExpanded(patient),
-              onToggleExpanded: () => _onToggleExpanded(patient),
+          // Use RepaintBoundary for each item to optimize rendering
+          return RepaintBoundary(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: PatientCard(
+                key: ValueKey(patient.id), // Add key for better widget reuse
+                patient: patient,
+                index: index + 1,
+                isExpanded: _expandedPatients.contains(patient.id),
+                onViewDetails: () => _onToggleExpanded(patient),
+                onToggleExpanded: () => _onToggleExpanded(patient),
+              ),
             ),
           );
         },

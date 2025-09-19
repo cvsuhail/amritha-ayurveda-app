@@ -114,6 +114,18 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 900;
+    
+    // Responsive margins and padding
+    final horizontalMargin = isSmallScreen ? 16.0 : (isTablet ? 40.0 : 60.0);
+    final verticalMargin = isSmallScreen ? 20.0 : 40.0;
+    final contentPadding = isSmallScreen ? 20.0 : 24.0;
+    
+    // Responsive max width
+    final maxWidth = isSmallScreen ? double.infinity : (isTablet ? 500.0 : 400.0);
+    
     return Material(
       color: Colors.transparent,
       child: BackdropFilter(
@@ -124,12 +136,18 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
             child: SlideTransition(
               position: _slideAnimation,
               child: Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(24),
-                constraints: const BoxConstraints(maxWidth: 400),
+                margin: EdgeInsets.symmetric(
+                  horizontal: horizontalMargin,
+                  vertical: verticalMargin,
+                ),
+                padding: EdgeInsets.all(contentPadding),
+                constraints: BoxConstraints(
+                  maxWidth: maxWidth,
+                  maxHeight: screenSize.height * 0.85, // Prevent overflow on small screens
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.15),
@@ -138,18 +156,20 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                     ),
                   ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 24),
-                    _buildTreatmentDropdown(),
-                    const SizedBox(height: 32),
-                    _buildPatientsSection(),
-                    const SizedBox(height: 32),
-                    _buildSaveButton(),
-                  ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(context),
+                      SizedBox(height: isSmallScreen ? 20 : 24),
+                      _buildTreatmentDropdown(),
+                      SizedBox(height: isSmallScreen ? 24 : 32),
+                      _buildPatientsSection(context),
+                      SizedBox(height: isSmallScreen ? 24 : 32),
+                      _buildSaveButton(context),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -159,22 +179,33 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          'Choose Treatment',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF333333),
+        Expanded(
+          child: Text(
+            'Choose Treatment',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: isSmallScreen ? 18 : 20,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF333333),
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
+        const SizedBox(width: 16),
         IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.close, color: Color(0xFF666666)),
+          icon: Icon(
+            Icons.close, 
+            color: const Color(0xFF666666),
+            size: isSmallScreen ? 20 : 24,
+          ),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
         ),
@@ -264,6 +295,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                 )
               : DropdownButtonHideUnderline(
                   child: DropdownButton<Treatment>(
+                    isExpanded: true,
                     value: _selectedTreatment,
                     hint: const Text(
                       'Choose preferred treatment',
@@ -272,16 +304,22 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                         fontSize: 14,
                         color: Color(0xFF999999),
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     items: _treatments.map((Treatment treatment) {
                       return DropdownMenuItem<Treatment>(
                         value: treatment,
-                        child: Text(
-                          treatment.name,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            color: Color(0xFF333333),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            treatment.name,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              color: Color(0xFF333333),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                       );
@@ -309,32 +347,104 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
     );
   }
 
-  Widget _buildPatientsSection() {
+  Widget _buildPatientsSection(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Add Patients',
           style: TextStyle(
             fontFamily: 'Poppins',
-            fontSize: 16,
+            fontSize: isSmallScreen ? 14 : 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF333333),
+            color: const Color(0xFF333333),
           ),
         ),
-        const SizedBox(height: 16),
-        _buildPatientCounter('Male', _maleCount, (count) {
+        SizedBox(height: isSmallScreen ? 12 : 16),
+        _buildPatientCounter(context, 'Male', _maleCount, (count) {
           setState(() => _maleCount = count);
         }),
-        const SizedBox(height: 16),
-        _buildPatientCounter('Female', _femaleCount, (count) {
+        SizedBox(height: isSmallScreen ? 12 : 16),
+        _buildPatientCounter(context, 'Female', _femaleCount, (count) {
           setState(() => _femaleCount = count);
         }),
       ],
     );
   }
 
-  Widget _buildPatientCounter(String gender, int count, Function(int) onChanged) {
+  Widget _buildPatientCounter(BuildContext context, String gender, int count, Function(int) onChanged) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+    
+    if (isSmallScreen) {
+      // Stack layout for small screens
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
+            ),
+            child: Text(
+              gender,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildCounterButton(
+                context: context,
+                icon: Icons.remove,
+                onPressed: count > 0 ? () => onChanged(count - 1) : null,
+              ),
+              const SizedBox(width: 20),
+              Container(
+                width: 60,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                ),
+                child: Center(
+                  child: Text(
+                    count.toString(),
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              _buildCounterButton(
+                context: context,
+                icon: Icons.add,
+                onPressed: () => onChanged(count + 1),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+    
+    // Original row layout for larger screens
     return Row(
       children: [
         Container(
@@ -357,6 +467,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
         ),
         const SizedBox(width: 16),
         _buildCounterButton(
+          context: context,
           icon: Icons.remove,
           onPressed: count > 0 ? () => onChanged(count - 1) : null,
         ),
@@ -383,6 +494,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
         ),
         const SizedBox(width: 16),
         _buildCounterButton(
+          context: context,
           icon: Icons.add,
           onPressed: () => onChanged(count + 1),
         ),
@@ -391,16 +503,22 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
   }
 
   Widget _buildCounterButton({
+    required BuildContext context,
     required IconData icon,
     required VoidCallback? onPressed,
   }) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
     final isEnabled = onPressed != null;
+    final buttonSize = isSmallScreen ? 36.0 : 40.0;
+    final iconSize = isSmallScreen ? 18.0 : 20.0;
+    
     return Container(
-      width: 40,
-      height: 40,
+      width: buttonSize,
+      height: buttonSize,
       decoration: BoxDecoration(
         color: const Color(0xFF3D704D),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(buttonSize / 2),
         boxShadow: isEnabled ? [
           BoxShadow(
             color: const Color(0xFF3D704D).withOpacity(0.3),
@@ -413,19 +531,23 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(buttonSize / 2),
           child: Icon(
             icon,
             color: isEnabled ? Colors.white : Colors.white.withOpacity(0.5),
-            size: 20,
+            size: iconSize,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSaveButton() {
+  Widget _buildSaveButton(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
     final canSave = _selectedTreatment != null && (_maleCount > 0 || _femaleCount > 0);
+    final buttonHeight = isSmallScreen ? 48.0 : 50.0;
+    final fontSize = isSmallScreen ? 14.0 : 16.0;
     
     return AnimatedBuilder(
       animation: _scaleAnimation,
@@ -434,9 +556,9 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
           scale: _scaleAnimation.value,
           child: Container(
             width: double.infinity,
-            height: 50,
+            height: buttonHeight,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
               color: canSave ? const Color(0xFF3D704D) : const Color(0xFFCCCCCC),
               boxShadow: canSave ? [
                 BoxShadow(
@@ -453,13 +575,13 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                 onTapDown: canSave ? (_) => _scaleController.forward() : null,
                 onTapUp: canSave ? (_) => _scaleController.reverse() : null,
                 onTapCancel: canSave ? () => _scaleController.reverse() : null,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                 child: Center(
                   child: Text(
                     'Save',
                     style: TextStyle(
                       color: canSave ? Colors.white : const Color(0xFF666666),
-                      fontSize: 16,
+                      fontSize: fontSize,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
                     ),

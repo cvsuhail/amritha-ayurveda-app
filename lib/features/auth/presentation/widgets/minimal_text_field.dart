@@ -12,6 +12,9 @@ class MinimalTextField extends StatefulWidget {
   final bool enabled;
   final int? maxLines;
   final List<TextInputFormatter>? inputFormatters;
+  final bool isSmallScreen;
+  final bool isTablet;
+  final bool isLandscape;
 
   const MinimalTextField({
     super.key,
@@ -25,6 +28,9 @@ class MinimalTextField extends StatefulWidget {
     this.enabled = true,
     this.maxLines = 1,
     this.inputFormatters,
+    this.isSmallScreen = false,
+    this.isTablet = false,
+    this.isLandscape = false,
   });
 
   @override
@@ -77,6 +83,17 @@ class MinimalTextFieldState extends State<MinimalTextField> {
 
   @override
   Widget build(BuildContext context) {
+    // Responsive calculations
+    final labelFontSize = widget.isTablet ? 16.0 : (widget.isSmallScreen ? 12.0 : 14.0);
+    final textFontSize = widget.isTablet ? 16.0 : (widget.isSmallScreen ? 13.0 : 14.0);
+    final hintFontSize = widget.isTablet ? 16.0 : (widget.isSmallScreen ? 13.0 : 14.0);
+    final errorFontSize = widget.isTablet ? 13.0 : (widget.isSmallScreen ? 11.0 : 12.0);
+    final fieldHeight = widget.isTablet ? 64.0 : (widget.isSmallScreen ? 48.0 : 56.0);
+    final labelSpacing = widget.isTablet ? 10.0 : (widget.isSmallScreen ? 6.0 : 8.0);
+    final borderRadius = widget.isTablet ? 14.0 : (widget.isSmallScreen ? 10.0 : 12.0);
+    final horizontalPadding = widget.isTablet ? 20.0 : (widget.isSmallScreen ? 12.0 : 16.0);
+    final verticalPadding = widget.isTablet ? 20.0 : (widget.isSmallScreen ? 14.0 : 18.0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -84,25 +101,25 @@ class MinimalTextFieldState extends State<MinimalTextField> {
         if (widget.label != null) ...[
           Text(
             widget.label!,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF333333),
+            style: TextStyle(
+              fontSize: labelFontSize,
+              color: const Color(0xFF333333),
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w500,
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: labelSpacing),
         ],
         
         // Text Field Container
         Container(
-          height: widget.maxLines != null && widget.maxLines! > 1 ? null : 56,
+          height: widget.maxLines != null && widget.maxLines! > 1 ? null : fieldHeight,
           constraints: widget.maxLines != null && widget.maxLines! > 1 
-              ? const BoxConstraints(minHeight: 56) 
+              ? BoxConstraints(minHeight: fieldHeight) 
               : null,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(borderRadius),
             color: const Color(0xFFF5F5F5),
             border: _isFocused
                 ? Border.all(
@@ -120,7 +137,7 @@ class MinimalTextFieldState extends State<MinimalTextField> {
                       ),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(borderRadius),
             child: TextFormField(
             controller: widget.controller,
             focusNode: _focusNode,
@@ -133,18 +150,18 @@ class MinimalTextFieldState extends State<MinimalTextField> {
             textAlignVertical: widget.maxLines != null && widget.maxLines! > 1 
                 ? TextAlignVertical.top 
                 : TextAlignVertical.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF333333),
+            style: TextStyle(
+              fontSize: textFontSize,
+              color: const Color(0xFF333333),
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
             decoration: InputDecoration(
               hintText: widget.hintText,
-              hintStyle: const TextStyle(
-                color: Color(0xFF9E9E9E),
-                fontSize: 14,
+              hintStyle: TextStyle(
+                color: const Color(0xFF9E9E9E),
+                fontSize: hintFontSize,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w400,
                 height: 1.4,
@@ -155,9 +172,9 @@ class MinimalTextFieldState extends State<MinimalTextField> {
               errorBorder: InputBorder.none,
               focusedErrorBorder: InputBorder.none,
               disabledBorder: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 18,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
               ),
               isDense: true,
             ),
@@ -169,12 +186,15 @@ class MinimalTextFieldState extends State<MinimalTextField> {
         // Error Message
         if (_hasError && _errorText != null)
           Padding(
-            padding: const EdgeInsets.only(top: 8, left: 4),
+            padding: EdgeInsets.only(
+              top: labelSpacing, 
+              left: widget.isSmallScreen ? 2 : 4
+            ),
             child: Text(
               _errorText!,
-              style: const TextStyle(
-                color: Color(0xFFE53E3E),
-                fontSize: 12,
+              style: TextStyle(
+                color: const Color(0xFFE53E3E),
+                fontSize: errorFontSize,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w400,
               ),

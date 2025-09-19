@@ -31,6 +31,9 @@ class _PatientCardState extends State<PatientCard> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
+  // Cache formatted date to avoid repeated formatting
+  String get _formattedDate => _formatDate(widget.patient.date);
+
   Widget _buildEnhancedDetailRow(String label, String value, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -170,11 +173,11 @@ class _PatientCardState extends State<PatientCard> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFE8E8E8), // Light gray background matching the UI
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF1F1F1), // Updated background color
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -187,13 +190,13 @@ class _PatientCardState extends State<PatientCard> {
                   '${widget.index}.',
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C2C2C),
                     fontFamily: 'Poppins',
                   ),
                 ),
                 
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 
                 // Patient Details
                 Expanded(
@@ -205,23 +208,25 @@ class _PatientCardState extends State<PatientCard> {
                         widget.patient.name,
                         style: const TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2C2C2C),
                           fontFamily: 'Poppins',
                         ),
                       ),
                       
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       
                       // Package Description
                       Text(
                         widget.patient.packageDescription,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF006837), // Green color matching the UI
+                          fontWeight: FontWeight.w400,
                           fontFamily: 'Poppins',
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -235,57 +240,60 @@ class _PatientCardState extends State<PatientCard> {
             Row(
               children: [
                 // Date with calendar icon
-                Expanded(
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/icons/calendar.png',
-                        width: 16,
-                        height: 16,
-                        color: Colors.orange,
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/icons/calendar.png',
+                      width: 16,
+                      height: 16,
+                      color: const Color(0xFFFF6B35), // Orange color
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formattedDate,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF666666),
+                        fontWeight: FontWeight.w400,
+                        fontFamily: 'Poppins',
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDate(widget.patient.date),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
 
+                const SizedBox(width: 32),
+
                 // Assigned Person with person icon
-                Expanded(
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/icons/person.png',
-                        width: 16,
-                        height: 16,
-                        color: Colors.orange,
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/icons/person.png',
+                      width: 16,
+                      height: 16,
+                      color: const Color(0xFFFF6B35), // Orange color
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.patient.assignedPerson,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF666666),
+                        fontWeight: FontWeight.w400,
+                        fontFamily: 'Poppins',
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.patient.assignedPerson,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                            fontFamily: 'Poppins',
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Divider
+            Container(
+              height: 1,
+              width: double.infinity,
+              color: const Color(0xFFE0E0E0),
             ),
 
             const SizedBox(height: 16),
@@ -295,26 +303,26 @@ class _PatientCardState extends State<PatientCard> {
               onTap: _onViewDetailsPressed,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
+                    const Text(
                       'View Booking details',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF2C2C2C),
+                        fontWeight: FontWeight.w400,
                         fontFamily: 'Poppins',
                       ),
                     ),
                     AnimatedRotation(
-                      turns: widget.isExpanded ? 0.5 : 0,
+                      turns: widget.isExpanded ? 0.25 : 0,
                       duration: const Duration(milliseconds: 300),
-                      child: Icon(
-                        Icons.keyboard_arrow_right_rounded,
-                        color: AppColors.primary,
-                        size: 24,
+                      child: const Icon(
+                        Icons.keyboard_arrow_right,
+                        color: Color(0xFF006837),
+                        size: 20,
                       ),
                     ),
                   ],

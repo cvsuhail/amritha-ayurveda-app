@@ -73,7 +73,7 @@ class PatientListShimmer extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
-        children: List.generate(3, (index) => 
+        children: List.generate(2, (index) => // Reduced from 3 to 2 for faster initial render 
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             child: SimpleShimmer(
