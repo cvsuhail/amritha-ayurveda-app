@@ -11,11 +11,21 @@ class ApiService {
     sendTimeout: const Duration(seconds: 30),
   ));
   
+  // Initialize interceptors
+  static void init() {
+    addInterceptors();
+  }
+  
   static Future<Map<String, dynamic>> login({
     required String username,
     required String password,
   }) async {
     try {
+      if (kDebugMode) {
+        print('Attempting login with username: $username');
+        print('API URL: $baseUrl/Login');
+      }
+      
       final formData = FormData.fromMap({
         'username': username,
         'password': password,
@@ -30,6 +40,11 @@ class ApiService {
           },
         ),
       );
+      
+      if (kDebugMode) {
+        print('API Response status: ${response.statusCode}');
+        print('API Response data: ${response.data}');
+      }
       
       final Map<String, dynamic> responseData = response.data;
       
@@ -48,6 +63,13 @@ class ApiService {
         };
       }
     } on DioException catch (e) {
+      if (kDebugMode) {
+        print('DioException type: ${e.type}');
+        print('DioException message: ${e.message}');
+        print('DioException response: ${e.response?.data}');
+        print('DioException status code: ${e.response?.statusCode}');
+      }
+      
       // Handle Dio specific errors
       String errorMessage = 'Network error. Please check your internet connection.';
       

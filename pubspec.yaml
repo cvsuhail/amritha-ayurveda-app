@@ -37,8 +37,8 @@ dependencies:
   # HTTP requests
   dio: ^5.4.3+1
   
-  # Secure storage
-  flutter_secure_storage: ^9.2.2
+  # SharedPreferences for local storage
+  shared_preferences: ^2.2.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
