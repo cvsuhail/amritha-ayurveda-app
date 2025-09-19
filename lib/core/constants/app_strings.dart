@@ -8,9 +8,9 @@ class AppStrings {
   
   // Login Screen
   static const String loginTitle = 'Login Or Register To Book\nYour Appointments';
-  static const String emailLabel = 'Email';
+  static const String emailLabel = 'Username';
   static const String passwordLabel = 'Password';
-  static const String emailHint = 'Enter your email';
+  static const String emailHint = 'Enter your username';
   static const String passwordHint = 'Enter password';
   static const String loginButton = 'Login';
   static const String termsText = 'By creating or logging into an account you are agreeing with our ';
@@ -19,8 +19,8 @@ class AppStrings {
   static const String andText = ' and ';
   
   // Validation Messages
-  static const String emailRequired = 'Email is required';
-  static const String emailInvalid = 'Please enter a valid email';
+  static const String emailRequired = 'Username is required';
+  static const String emailInvalid = 'Please enter a valid username';
   static const String passwordRequired = 'Password is required';
   static const String passwordMinLength = 'Password must be at least 6 characters';
   

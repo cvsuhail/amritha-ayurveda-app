@@ -1,22 +1,20 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
-  static const FlutterSecureStorage _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock_this_device,
-    ),
-  );
+  static SharedPreferences? _prefs;
   
   static const String _tokenKey = 'auth_token';
   static const String _userDataKey = 'user_data';
   static const String _refreshTokenKey = 'refresh_token';
   
+  static Future<void> _initPrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+  }
+  
   static Future<void> saveToken(String token) async {
     try {
-      await _storage.write(key: _tokenKey, value: token);
+      await _initPrefs();
+      await _prefs!.setString(_tokenKey, token);
     } catch (e) {
       throw Exception('Failed to save token: $e');
     }
@@ -24,7 +22,8 @@ class StorageService {
   
   static Future<String?> getToken() async {
     try {
-      return await _storage.read(key: _tokenKey);
+      await _initPrefs();
+      return _prefs!.getString(_tokenKey);
     } catch (e) {
       return null;
     }
@@ -32,7 +31,8 @@ class StorageService {
   
   static Future<void> deleteToken() async {
     try {
-      await _storage.delete(key: _tokenKey);
+      await _initPrefs();
+      await _prefs!.remove(_tokenKey);
     } catch (e) {
       throw Exception('Failed to delete token: $e');
     }
@@ -40,7 +40,8 @@ class StorageService {
   
   static Future<void> saveRefreshToken(String refreshToken) async {
     try {
-      await _storage.write(key: _refreshTokenKey, value: refreshToken);
+      await _initPrefs();
+      await _prefs!.setString(_refreshTokenKey, refreshToken);
     } catch (e) {
       throw Exception('Failed to save refresh token: $e');
     }
@@ -48,7 +49,8 @@ class StorageService {
   
   static Future<String?> getRefreshToken() async {
     try {
-      return await _storage.read(key: _refreshTokenKey);
+      await _initPrefs();
+      return _prefs!.getString(_refreshTokenKey);
     } catch (e) {
       return null;
     }
@@ -56,7 +58,8 @@ class StorageService {
   
   static Future<void> deleteRefreshToken() async {
     try {
-      await _storage.delete(key: _refreshTokenKey);
+      await _initPrefs();
+      await _prefs!.remove(_refreshTokenKey);
     } catch (e) {
       throw Exception('Failed to delete refresh token: $e');
     }
@@ -64,7 +67,8 @@ class StorageService {
   
   static Future<void> saveUserData(String userData) async {
     try {
-      await _storage.write(key: _userDataKey, value: userData);
+      await _initPrefs();
+      await _prefs!.setString(_userDataKey, userData);
     } catch (e) {
       throw Exception('Failed to save user data: $e');
     }
@@ -72,7 +76,8 @@ class StorageService {
   
   static Future<String?> getUserData() async {
     try {
-      return await _storage.read(key: _userDataKey);
+      await _initPrefs();
+      return _prefs!.getString(_userDataKey);
     } catch (e) {
       return null;
     }
@@ -80,7 +85,8 @@ class StorageService {
   
   static Future<void> deleteUserData() async {
     try {
-      await _storage.delete(key: _userDataKey);
+      await _initPrefs();
+      await _prefs!.remove(_userDataKey);
     } catch (e) {
       throw Exception('Failed to delete user data: $e');
     }
@@ -97,7 +103,8 @@ class StorageService {
   
   static Future<void> clearAll() async {
     try {
-      await _storage.deleteAll();
+      await _initPrefs();
+      await _prefs!.clear();
     } catch (e) {
       throw Exception('Failed to clear storage: $e');
     }
@@ -105,7 +112,8 @@ class StorageService {
   
   static Future<bool> containsKey(String key) async {
     try {
-      return await _storage.containsKey(key: key);
+      await _initPrefs();
+      return _prefs!.containsKey(key);
     } catch (e) {
       return false;
     }
@@ -113,7 +121,16 @@ class StorageService {
   
   static Future<Map<String, String>> getAllData() async {
     try {
-      return await _storage.readAll();
+      await _initPrefs();
+      final keys = _prefs!.getKeys();
+      final Map<String, String> data = {};
+      for (String key in keys) {
+        final value = _prefs!.getString(key);
+        if (value != null) {
+          data[key] = value;
+        }
+      }
+      return data;
     } catch (e) {
       return {};
     }

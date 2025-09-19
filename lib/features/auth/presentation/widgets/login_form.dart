@@ -400,9 +400,7 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
     if (value == null || value.isEmpty) {
       return AppStrings.emailRequired;
     }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return AppStrings.emailInvalid;
-    }
+    // Removed email format validation to allow usernames like 'test_user'
     return null;
   }
 

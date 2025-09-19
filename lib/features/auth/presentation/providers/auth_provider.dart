@@ -84,10 +84,22 @@ class AuthProvider extends ChangeNotifier {
         _setError(result['message'] ?? 'Login failed');
       }
     } catch (e) {
-      _setError('An unexpected error occurred. Please try again.');
       if (kDebugMode) {
         print('Login error: $e');
+        print('Error type: ${e.runtimeType}');
       }
+      
+      // Provide more specific error messages based on error type
+      String errorMessage = 'An unexpected error occurred. Please try again.';
+      if (e.toString().contains('SocketException') || e.toString().contains('NetworkException')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (e.toString().contains('FormatException')) {
+        errorMessage = 'Invalid server response. Please try again.';
+      }
+      
+      _setError(errorMessage);
     }
   }
 
@@ -101,12 +113,10 @@ class AuthProvider extends ChangeNotifier {
       
       // Simulate validation
       if (email.isEmpty || password.isEmpty) {
-        throw Exception('Email and password are required');
+        throw Exception('Username and password are required');
       }
       
-      if (!_isValidEmail(email)) {
-        throw Exception('Please enter a valid email');
-      }
+      // Removed email validation to allow usernames like 'test_user'
       
       if (password.length < 6) {
         throw Exception('Password must be at least 6 characters');
@@ -160,7 +170,4 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
 }
