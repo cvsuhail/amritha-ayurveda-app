@@ -322,17 +322,6 @@ class _PatientListPageState extends State<PatientListPage> {
             child: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
               child: Center(
                 child: Image.asset(
                   'assets/icons/back.png',
@@ -361,17 +350,6 @@ class _PatientListPageState extends State<PatientListPage> {
             child: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
               child: Stack(
                 children: [
                   Center(
@@ -379,19 +357,6 @@ class _PatientListPageState extends State<PatientListPage> {
                       'assets/icons/notificaion.png',
                       width: 20,
                       height: 20,
-                    ),
-                  ),
-                  // Red notification dot
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
                     ),
                   ),
                 ],
@@ -454,7 +419,7 @@ class _PatientListPageState extends State<PatientListPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: Text(
