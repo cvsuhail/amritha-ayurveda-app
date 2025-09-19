@@ -29,6 +29,10 @@ class _PatientListPageState extends State<PatientListPage> {
   
   String _selectedSortOption = 'Date';
   Timer? _debounceTimer;
+  
+  // Double tap to exit functionality
+  DateTime? _lastBackPressed;
+  Timer? _exitTimer;
 
   @override
   void initState() {
@@ -199,103 +203,67 @@ class _PatientListPageState extends State<PatientListPage> {
     );
   }
 
-
-  void _showLogoutConfirmation() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Logout',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2C2C2C),
-            ),
-          ),
-          content: const Text(
-            'Are you sure you want to logout?',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF666666),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop(); // Close dialog
-                await _logout();
-              },
-              child: const Text(
-                'Logout',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _logout() async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.logout();
+  // Handle back button press with double-tap to exit functionality
+  bool _handleBackPress() {
+    final now = DateTime.now();
+    
+    // Check if this is the first back press or if enough time has passed
+    if (_lastBackPressed == null || 
+        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+      _lastBackPressed = now;
       
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const LoginPage(),
+      // Show snackbar with exit instruction
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Press again to exit',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Poppins',
+            ),
           ),
-          (route) => false, // Remove all previous routes
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error during logout. Please try again.'),
-            backgroundColor: Colors.red,
+          backgroundColor: AppColors.textPrimary,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
-        );
-      }
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      
+      // Set timer to clear the last back pressed after 2 seconds
+      _exitTimer?.cancel();
+      _exitTimer = Timer(const Duration(seconds: 2), () {
+        _lastBackPressed = null;
+      });
+      
+      return false; // Don't exit on first press
+    } else {
+      // Second back press within 2 seconds - exit the app
+      SystemNavigator.pop();
+      return true;
     }
   }
+
+
 
   @override
   void dispose() {
     _searchController.dispose();
     _debounceTimer?.cancel();
+    _exitTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: false, // Prevent default pop behavior
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          _showLogoutConfirmation();
+          _handleBackPress();
         }
       },
       child: Scaffold(
@@ -336,7 +304,7 @@ class _PatientListPageState extends State<PatientListPage> {
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              _showLogoutConfirmation();
+              _handleBackPress();
             },
             child: Container(
               width: 40,

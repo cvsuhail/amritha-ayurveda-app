@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import '../widgets/minimal_text_field.dart';
 import '../widgets/add_treatment_modal.dart';
 import '../widgets/edit_treatment_modal.dart';
-import '../widgets/success_modal.dart';
 import '../../../../core/models/branch.dart';
 import '../../../../core/models/treatment.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/pdf_service.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../patients/presentation/pages/patient_list_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -1397,7 +1399,95 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     return branch.id.toString();
   }
 
+  Future<void> _downloadPdfAndNavigateToPatientList(Map<String, dynamic> pdfData) async {
+    try {
+      // Generate and download PDF
+      await PdfService.generateAndDownloadPatientPdf(pdfData);
+      
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Patient registered and PDF downloaded successfully!'),
+              ],
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
 
+        // Navigate to patient list after a short delay
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            _navigateToPatientList();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        // Show error message but still navigate to patient list
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('PDF download failed: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // Still navigate to patient list even if PDF download failed
+        Future.delayed(const Duration(milliseconds: 2000), () {
+          if (mounted) {
+            _navigateToPatientList();
+          }
+        });
+      }
+    }
+  }
+
+  void _navigateToPatientList() {
+    // Navigate to patient list with replacement
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const PatientListPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+      (route) => false, // Remove all previous routes
+    );
+  }
 
   void _handleSave() async {
     if (_isLoading) return;
@@ -1538,11 +1628,11 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
             }).toList(),
           };
           
-          // Stop loading before showing modal
+          // Stop loading before proceeding
           setState(() => _isLoading = false);
           
-          // Show success modal with PDF download option
-          showSuccessModal(context, pdfData);
+          // Directly download PDF and navigate to patient list
+          await _downloadPdfAndNavigateToPatientList(pdfData);
           return; // Early return to avoid executing finally block
         } else {
           // Handle API error
