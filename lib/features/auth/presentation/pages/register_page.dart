@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/minimal_text_field.dart';
 import '../widgets/add_treatment_modal.dart';
+import '../../../../core/models/branch.dart';
+import '../../../../core/services/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -39,6 +41,11 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
   String? _selectedHour;
   String? _selectedMinute;
   
+  // Branch data
+  List<Branch> _branches = [];
+  bool _isBranchLoading = false;
+  String? _branchError;
+  
   // Loading state
   bool _isLoading = false;
   
@@ -64,6 +71,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     _initializeAnimations();
     _startAnimations();
     _setupAmountCalculation();
+    _fetchBranches();
   }
 
   void _initializeAnimations() {
@@ -147,6 +155,45 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     
     final balance = total - discount - advance;
     _balanceAmountController.text = balance > 0 ? balance.toString() : '0';
+  }
+
+  Future<void> _fetchBranches() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isBranchLoading = true;
+      _branchError = null;
+    });
+
+    try {
+      final result = await ApiService.getBranchList();
+      
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        final branchData = result['data'] as List;
+        setState(() {
+          _branches = branchData.map((json) => Branch.fromJson(json)).toList();
+          _isBranchLoading = false;
+        });
+      } else {
+        setState(() {
+          _branchError = result['message'] ?? 'Failed to load branches';
+          _isBranchLoading = false;
+        });
+        
+        if (result['requiresAuth'] == true) {
+          // Handle authentication required - could navigate to login
+          _showErrorSnackBar('Session expired. Please login again.');
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _branchError = 'Failed to load branches. Please try again.';
+        _isBranchLoading = false;
+      });
+    }
   }
 
   @override
@@ -336,12 +383,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
         const SizedBox(height: 20),
         _buildSectionLabel('Branch'),
         const SizedBox(height: 8),
-        _buildDropdown(
-          value: _selectedBranch,
-          hint: 'Select the branch',
-          items: ['Main Branch', 'Medical Center', 'Wellness Center'],
-          onChanged: (value) => setState(() => _selectedBranch = value),
-        ),
+        _buildBranchDropdown(),
       ],
     );
   }
@@ -1103,6 +1145,118 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3D704D)),
         ),
       ),
+    );
+  }
+
+  Widget _buildBranchDropdown() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
+      ),
+      child: _isBranchLoading
+          ? Container(
+              height: 48,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        const Color(0xFF3D704D).withOpacity(0.6),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Loading branches...',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      color: Color(0xFF999999),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _branchError != null
+              ? Container(
+                  height: 48,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 16,
+                        color: Color(0xFFFF6B6B),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _branchError!,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: Color(0xFFFF6B6B),
+                          ),
+                        ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _fetchBranches,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.refresh,
+                              size: 16,
+                              color: const Color(0xFF3D704D).withOpacity(0.7),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedBranch,
+                    hint: const Text(
+                      'Select the branch',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Color(0xFF999999),
+                      ),
+                    ),
+                    items: _branches.map((Branch branch) {
+                      return DropdownMenuItem<String>(
+                        value: branch.name,
+                        child: Text(
+                          branch.name,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: _branches.isEmpty
+                        ? null
+                        : (String? value) {
+                            setState(() => _selectedBranch = value);
+                          },
+                    icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3D704D)),
+                  ),
+                ),
     );
   }
 
