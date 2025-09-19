@@ -2,41 +2,38 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/models/treatment.dart';
-import '../../../../core/services/api_service.dart';
 
-class AddTreatmentModal extends StatefulWidget {
+class EditTreatmentModal extends StatefulWidget {
+  final Treatment treatment;
   final Function(Treatment) onSave;
 
-  const AddTreatmentModal({
+  const EditTreatmentModal({
     super.key,
+    required this.treatment,
     required this.onSave,
   });
 
   @override
-  State<AddTreatmentModal> createState() => _AddTreatmentModalState();
+  State<EditTreatmentModal> createState() => _EditTreatmentModalState();
 }
 
-class _AddTreatmentModalState extends State<AddTreatmentModal>
+class _EditTreatmentModalState extends State<EditTreatmentModal>
     with TickerProviderStateMixin {
-  Treatment? _selectedTreatment;
-  int _maleCount = 0;
-  int _femaleCount = 0;
+  late int _maleCount;
+  late int _femaleCount;
   
   late AnimationController _slideController;
   late AnimationController _scaleController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
 
-  List<Treatment> _treatments = [];
-  bool _isTreatmentLoading = false;
-  String? _treatmentError;
-
   @override
   void initState() {
     super.initState();
+    _maleCount = widget.treatment.maleCount;
+    _femaleCount = widget.treatment.femaleCount;
     _initializeAnimations();
     _startAnimations();
-    _fetchTreatments();
   }
 
   void _initializeAnimations() {
@@ -69,40 +66,6 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
 
   void _startAnimations() {
     _slideController.forward();
-  }
-
-  Future<void> _fetchTreatments() async {
-    if (!mounted) return;
-    
-    setState(() {
-      _isTreatmentLoading = true;
-      _treatmentError = null;
-    });
-
-    try {
-      final result = await ApiService.getTreatmentList();
-      
-      if (!mounted) return;
-
-      if (result['success'] == true) {
-        final treatmentData = result['data'] as List;
-        setState(() {
-          _treatments = treatmentData.map((json) => Treatment.fromJson(json)).toList();
-          _isTreatmentLoading = false;
-        });
-      } else {
-        setState(() {
-          _treatmentError = result['message'] ?? 'Failed to load treatments';
-          _isTreatmentLoading = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _treatmentError = 'Failed to load treatments. Please try again.';
-        _isTreatmentLoading = false;
-      });
-    }
   }
 
   @override
@@ -144,7 +107,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                   children: [
                     _buildHeader(),
                     const SizedBox(height: 24),
-                    _buildTreatmentDropdown(),
+                    _buildTreatmentInfo(),
                     const SizedBox(height: 32),
                     _buildPatientsSection(),
                     const SizedBox(height: 32),
@@ -164,7 +127,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const Text(
-          'Choose Treatment',
+          'Edit Treatment',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontSize: 20,
@@ -182,130 +145,53 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
     );
   }
 
-  Widget _buildTreatmentDropdown() {
+  Widget _buildTreatmentInfo() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF3D704D),
-          width: 2,
+          color: const Color(0xFF3D704D).withOpacity(0.2),
+          width: 1,
         ),
       ),
-      child: _isTreatmentLoading
-          ? Container(
-              height: 48,
-              alignment: Alignment.centerLeft,
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        const Color(0xFF3D704D).withOpacity(0.6),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Loading treatments...',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      color: Color(0xFF999999),
-                    ),
-                  ),
-                ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Treatment',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF666666),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.treatment.name,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
+            ),
+          ),
+          if (widget.treatment.description != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              widget.treatment.description!,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Color(0xFF666666),
               ),
-            )
-          : _treatmentError != null
-              ? Container(
-                  height: 48,
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 16,
-                        color: Color(0xFFFF6B6B),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _treatmentError!,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            color: Color(0xFFFF6B6B),
-                          ),
-                        ),
-                      ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _fetchTreatments,
-                          borderRadius: BorderRadius.circular(4),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.refresh,
-                              size: 16,
-                              color: const Color(0xFF3D704D).withOpacity(0.7),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : DropdownButtonHideUnderline(
-                  child: DropdownButton<Treatment>(
-                    value: _selectedTreatment,
-                    hint: const Text(
-                      'Choose preferred treatment',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        color: Color(0xFF999999),
-                      ),
-                    ),
-                    items: _treatments.map((Treatment treatment) {
-                      return DropdownMenuItem<Treatment>(
-                        value: treatment,
-                        child: Text(
-                          treatment.name,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            color: Color(0xFF333333),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: _treatments.isEmpty
-                        ? null
-                        : (Treatment? value) {
-                            setState(() {
-                              _selectedTreatment = value;
-                            });
-                          },
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Color(0xFF3D704D),
-                      size: 24,
-                    ),
-                    dropdownColor: Colors.white,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -314,7 +200,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Add Patients',
+          'Edit Patient Count',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontSize: 16,
@@ -425,7 +311,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
   }
 
   Widget _buildSaveButton() {
-    final canSave = _selectedTreatment != null && (_maleCount > 0 || _femaleCount > 0);
+    final canSave = _maleCount > 0 || _femaleCount > 0;
     
     return AnimatedBuilder(
       animation: _scaleAnimation,
@@ -456,7 +342,7 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
                 borderRadius: BorderRadius.circular(12),
                 child: Center(
                   child: Text(
-                    'Save',
+                    'Update',
                     style: TextStyle(
                       color: canSave ? Colors.white : const Color(0xFF666666),
                       fontSize: 16,
@@ -474,31 +360,35 @@ class _AddTreatmentModalState extends State<AddTreatmentModal>
   }
 
   void _handleSave() {
-    if (_selectedTreatment != null && (_maleCount > 0 || _femaleCount > 0)) {
+    if (_maleCount > 0 || _femaleCount > 0) {
       HapticFeedback.lightImpact();
       
-      // Create a copy of the selected treatment with the counts
-      final treatmentWithCounts = _selectedTreatment!.copyWith(
+      // Create updated treatment with new counts
+      final updatedTreatment = widget.treatment.copyWith(
         maleCount: _maleCount,
         femaleCount: _femaleCount,
       );
       
-      widget.onSave(treatmentWithCounts);
+      widget.onSave(updatedTreatment);
       Navigator.pop(context);
     }
   }
 }
 
 // Helper function to show the modal
-Future<void> showAddTreatmentModal(
+Future<void> showEditTreatmentModal(
   BuildContext context,
+  Treatment treatment,
   Function(Treatment) onSave,
 ) {
   return showDialog(
     context: context,
     barrierDismissible: true,
     builder: (BuildContext context) {
-      return AddTreatmentModal(onSave: onSave);
+      return EditTreatmentModal(
+        treatment: treatment,
+        onSave: onSave,
+      );
     },
   );
 }

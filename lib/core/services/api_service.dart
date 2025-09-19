@@ -386,6 +386,106 @@ class ApiService {
     }
   }
 
+  // Treatment List API
+  static Future<Map<String, dynamic>> getTreatmentList() async {
+    try {
+      final token = await StorageService.getToken();
+      if (kDebugMode) {
+        print('Fetching treatment list...');
+        print('API URL: $baseUrl/TreatmentList');
+        print('Retrieved token from storage: ${token != null ? '${token.substring(0, 20)}...' : 'null'}');
+      }
+      
+      if (token == null || token.isEmpty) {
+        if (kDebugMode) {
+          print('No token found in storage, authentication required');
+        }
+        return {
+          'success': false,
+          'message': 'Authentication required. Please login again.',
+          'requiresAuth': true,
+        };
+      }
+
+      // Make GET request with Authorization header
+      final response = await _dio.get(
+        '/TreatmentList',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+
+      if (kDebugMode) {
+        print('Treatment List API Response status: ${response.statusCode}');
+        print('Treatment List API Response data: ${response.data}');
+      }
+
+      final Map<String, dynamic> responseData = response.data;
+
+      if (responseData['status'] == true || responseData['success'] == true) {
+        return {
+          'success': true,
+          'data': responseData['treatments'] ?? responseData['treatment_list'] ?? responseData['data'] ?? [],
+          'message': responseData['message'] ?? 'Treatment list fetched successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Failed to fetch treatment list',
+          'data': [],
+        };
+      }
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        print('DioException in getTreatmentList: ${e.type}');
+        print('DioException message: ${e.message}');
+        print('DioException response: ${e.response?.data}');
+        print('DioException status code: ${e.response?.statusCode}');
+      }
+      
+      String errorMessage = 'Network error. Please check your internet connection.';
+      
+      if (e.response != null) {
+        final responseData = e.response!.data;
+        if (responseData is Map<String, dynamic>) {
+          errorMessage = responseData['message'] ?? 'Failed to fetch treatment list';
+        }
+        
+        // Handle 401 Unauthorized
+        if (e.response!.statusCode == 401) {
+          return {
+            'success': false,
+            'message': 'Session expired. Please login again.',
+            'requiresAuth': true,
+            'data': [],
+          };
+        }
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage = 'Connection timeout. Please try again.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage = 'No internet connection. Please check your network.';
+      }
+      
+      return {
+        'success': false,
+        'message': errorMessage,
+        'error': e.toString(),
+        'data': [],
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'An unexpected error occurred. Please try again.',
+        'error': e.toString(),
+        'data': [],
+      };
+    }
+  }
+
   static void addInterceptors() {
     _dio.interceptors.add(LogInterceptor(
       requestBody: true,

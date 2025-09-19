@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/minimal_text_field.dart';
 import '../widgets/add_treatment_modal.dart';
+import '../widgets/edit_treatment_modal.dart';
 import '../../../../core/models/branch.dart';
+import '../../../../core/models/treatment.dart';
 import '../../../../core/services/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -50,9 +52,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
   bool _isLoading = false;
   
   // Treatment data
-  List<Treatment> _treatments = [
-    Treatment(name: 'Couple Combo package i..', maleCount: 2, femaleCount: 2)
-  ];
+  List<Treatment> _treatments = [];
   
   // Animation controllers
   late AnimationController _slideController;
@@ -513,9 +513,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                   _buildActionButton(
                     icon: Icons.edit_outlined,
                     color: const Color(0xFF3D704D),
-                    onTap: () {
-                      // Handle edit treatment
-                    },
+                    onTap: () => _editTreatment(index),
                   ),
                   if (_treatments.length > 1) ...[
                     const SizedBox(width: 8),
@@ -1306,13 +1304,22 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
   void _addTreatment() {
     showAddTreatmentModal(
       context,
-      (String treatmentName, int maleCount, int femaleCount) {
+      (Treatment treatment) {
         setState(() {
-          _treatments.add(Treatment(
-            name: treatmentName,
-            maleCount: maleCount,
-            femaleCount: femaleCount,
-          ));
+          _treatments.add(treatment);
+        });
+      },
+    );
+  }
+
+  void _editTreatment(int index) {
+    final currentTreatment = _treatments[index];
+    showEditTreatmentModal(
+      context,
+      currentTreatment,
+      (Treatment updatedTreatment) {
+        setState(() {
+          _treatments[index] = updatedTreatment;
         });
       },
     );
@@ -1453,17 +1460,4 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
       ),
     );
   }
-}
-
-// Treatment model class
-class Treatment {
-  String name;
-  int maleCount;
-  int femaleCount;
-
-  Treatment({
-    required this.name,
-    required this.maleCount,
-    required this.femaleCount,
-  });
 }
