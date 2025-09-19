@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class MinimalTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -9,6 +10,7 @@ class MinimalTextField extends StatefulWidget {
   final VoidCallback? onTap;
   final bool enabled;
   final int? maxLines;
+  final List<TextInputFormatter>? inputFormatters;
 
   const MinimalTextField({
     super.key,
@@ -20,6 +22,7 @@ class MinimalTextField extends StatefulWidget {
     this.onTap,
     this.enabled = true,
     this.maxLines = 1,
+    this.inputFormatters,
   });
 
   @override
@@ -104,6 +107,7 @@ class MinimalTextFieldState extends State<MinimalTextField> {
             enabled: widget.enabled,
             onTap: widget.onTap,
             maxLines: widget.maxLines,
+            inputFormatters: widget.inputFormatters,
             textAlignVertical: widget.maxLines != null && widget.maxLines! > 1 
                 ? TextAlignVertical.top 
                 : TextAlignVertical.center,

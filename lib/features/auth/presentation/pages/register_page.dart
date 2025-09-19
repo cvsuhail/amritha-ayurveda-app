@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/minimal_text_field.dart';
@@ -287,6 +288,14 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                       _buildAnimatedSection(_buildDateTimeSection(), 5),
                       const SizedBox(height: 32),
                       _buildAnimatedSection(_buildSaveButton(), 6),
+                      const SizedBox(height: 16),
+                      // Debug connectivity test button (only in debug mode)
+                      if (kDebugMode) ...[
+                        _buildAnimatedSection(_buildDebugButton(), 7),
+                        const SizedBox(height: 8),
+                        _buildAnimatedSection(_buildEndpointTestButton(), 8),
+                        const SizedBox(height: 16),
+                      ],
                       const SizedBox(height: 20),
                     ],
                   );
@@ -350,6 +359,10 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           controller: _whatsappController,
           hintText: 'Enter your Whatsapp number',
           keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(15), // Reasonable phone number length
+          ],
           validator: _validateWhatsapp,
         ),
         
@@ -810,6 +823,10 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           controller: _totalAmountController,
           hintText: 'Enter total amount',
           keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10), // Reasonable amount limit
+          ],
           validator: _validateAmount,
         ),
         
@@ -821,6 +838,10 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           controller: _discountAmountController,
           hintText: 'Enter discount amount',
           keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10), // Reasonable amount limit
+          ],
         ),
         
         const SizedBox(height: 20),
@@ -831,6 +852,10 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           controller: _advanceAmountController,
           hintText: 'Enter advance amount',
           keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10), // Reasonable amount limit
+          ],
           validator: _validateAmount,
         ),
         
@@ -842,6 +867,10 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           controller: _balanceAmountController,
           hintText: 'Balance amount',
           keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10), // Reasonable amount limit
+          ],
           enabled: false,
         ),
       ],
@@ -1086,6 +1115,72 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDebugButton() {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.orange.withOpacity(0.1),
+        border: Border.all(
+          color: Colors.orange.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _testConnectivity,
+          borderRadius: BorderRadius.circular(12),
+          child: const Center(
+            child: Text(
+              'Test API Connectivity (Debug)',
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEndpointTestButton() {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.blue.withOpacity(0.1),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _testEndpoints,
+          borderRadius: BorderRadius.circular(12),
+          child: const Center(
+            child: Text(
+              'Test Patient Endpoints (Debug)',
+              style: TextStyle(
+                color: Colors.blue,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1352,6 +1447,209 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     }
   }
 
+  // Helper method to format date and time according to API specification
+  String _formatDateTime() {
+    if (_selectedDate == null || _selectedHour == null || _selectedMinute == null) {
+      return '';
+    }
+    
+    // Create DateTime object with selected date and time
+    final hour = int.parse(_selectedHour!);
+    final minute = int.parse(_selectedMinute!);
+    
+    final dateTime = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      hour,
+      minute,
+    );
+    
+    // Format as ISO string to match existing data format (2025-09-19T09:13:00)
+    // Based on the PatientList response, the API expects ISO format, not DD/MM/YYYY-HH:MM AM/PM
+    final isoString = dateTime.toIso8601String();
+    
+    // Remove milliseconds and 'Z' to match the format seen in existing data
+    final formattedDateTime = isoString.split('.')[0];
+    
+    if (kDebugMode) {
+      print('Original API doc format would be: ${_formatDateTimeOriginal()}');
+      print('Using ISO format instead: $formattedDateTime');
+    }
+    
+    return formattedDateTime;
+  }
+  
+  // Keep the original format as backup
+  String _formatDateTimeOriginal() {
+    if (_selectedDate == null || _selectedHour == null || _selectedMinute == null) {
+      return '';
+    }
+    
+    final day = _selectedDate!.day.toString().padLeft(2, '0');
+    final month = _selectedDate!.month.toString().padLeft(2, '0');
+    final year = _selectedDate!.year.toString();
+    
+    final hour = int.parse(_selectedHour!);
+    final minute = _selectedMinute!.padLeft(2, '0');
+    
+    // Convert 24-hour to 12-hour format with AM/PM
+    String period = 'AM';
+    int displayHour = hour;
+    
+    if (hour == 0) {
+      displayHour = 12;
+    } else if (hour > 12) {
+      displayHour = hour - 12;
+      period = 'PM';
+    } else if (hour == 12) {
+      period = 'PM';
+    }
+    
+    final formattedHour = displayHour.toString().padLeft(2, '0');
+    
+    return '$day/$month/$year-$formattedHour:$minute $period';
+  }
+  
+  // Helper method to get treatment IDs for male treatments
+  String _getMaleTreatmentIds() {
+    final maleIds = <String>[];
+    for (final treatment in _treatments) {
+      if (treatment.maleCount > 0) {
+        // Add the treatment ID for each male count
+        for (int i = 0; i < treatment.maleCount; i++) {
+          maleIds.add(treatment.id.toString());
+        }
+      }
+    }
+    return maleIds.join(',');
+  }
+  
+  // Helper method to get treatment IDs for female treatments
+  String _getFemaleTreatmentIds() {
+    final femaleIds = <String>[];
+    for (final treatment in _treatments) {
+      if (treatment.femaleCount > 0) {
+        // Add the treatment ID for each female count
+        for (int i = 0; i < treatment.femaleCount; i++) {
+          femaleIds.add(treatment.id.toString());
+        }
+      }
+    }
+    return femaleIds.join(',');
+  }
+  
+  // Helper method to get all treatment IDs
+  String _getAllTreatmentIds() {
+    final treatmentIds = <String>[];
+    for (final treatment in _treatments) {
+      final totalCount = treatment.maleCount + treatment.femaleCount;
+      if (totalCount > 0) {
+        // Add the treatment ID for total count
+        for (int i = 0; i < totalCount; i++) {
+          treatmentIds.add(treatment.id.toString());
+        }
+      }
+    }
+    return treatmentIds.join(',');
+  }
+  
+  // Helper method to get executive name (using selected branch as executive for now)
+  String _getExecutiveName() {
+    // For now, use the selected branch as executive name
+    // This might need to be changed based on actual business logic
+    return _selectedBranch ?? 'Default Executive';
+  }
+  
+  // Helper method to get branch ID from branch name
+  String _getBranchId() {
+    if (_selectedBranch == null || _branches.isEmpty) {
+      return '';
+    }
+    
+    // Find the branch object by name and return its ID
+    final branch = _branches.firstWhere(
+      (branch) => branch.name == _selectedBranch,
+      orElse: () => Branch(id: 0, name: ''),
+    );
+    
+    if (kDebugMode) {
+      print('Selected branch name: $_selectedBranch');
+      print('Found branch ID: ${branch.id}');
+    }
+    
+    return branch.id.toString();
+  }
+
+  void _testConnectivity() async {
+    if (kDebugMode) {
+      print('Testing API connectivity...');
+    }
+    
+    try {
+      final result = await ApiService.testConnectivity();
+      
+      if (mounted) {
+        if (result['success'] == true) {
+          _showSuccessSnackBar('✅ API connectivity test successful!');
+        } else {
+          _showErrorSnackBar('❌ Connectivity test failed: ${result['message']}');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('❌ Connectivity test error: $e');
+      }
+    }
+  }
+
+  void _testEndpoints() async {
+    if (kDebugMode) {
+      print('Testing /PatientUpdate endpoint specifically...');
+    }
+    
+    try {
+      // Test the PatientUpdate endpoint specifically since it exists in Django URLs
+      final result = await ApiService.testEndpoint('/PatientUpdate', method: 'POST');
+      
+      if (mounted) {
+        final statusCode = result['statusCode'] ?? 'unknown';
+        final contentType = result['contentType'] ?? 'unknown';
+        final isJson = result['isJson'] ?? false;
+        
+        if (statusCode == 200) {
+          _showSuccessSnackBar('✅ /PatientUpdate: Works! ($statusCode - ${isJson ? 'JSON' : contentType})');
+        } else if (statusCode == 405) {
+          _showErrorSnackBar('⚠️ /PatientUpdate: Method Not Allowed (405) - Endpoint exists but doesn\'t accept POST');
+        } else if (statusCode == 400) {
+          _showErrorSnackBar('⚠️ /PatientUpdate: Bad Request (400) - Wrong data format');
+        } else if (statusCode == 422) {
+          _showErrorSnackBar('⚠️ /PatientUpdate: Unprocessable Entity (422) - Invalid data');
+        } else {
+          _showErrorSnackBar('⚠️ /PatientUpdate: $statusCode (${isJson ? 'JSON' : contentType})');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('❌ /PatientUpdate: Error - $e');
+      }
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF3D704D),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
   void _handleSave() async {
     if (_isLoading) return;
     
@@ -1390,47 +1688,131 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
       return;
     }
     
+    // Check if treatments are selected
+    if (_treatments.isEmpty) {
+      _showErrorSnackBar('Please add at least one treatment');
+      return;
+    }
+    
+    // Check if at least one treatment has male or female count > 0
+    bool hasValidTreatment = _treatments.any((treatment) => 
+        treatment.maleCount > 0 || treatment.femaleCount > 0);
+    
+    if (!hasValidTreatment) {
+      _showErrorSnackBar('Please set male or female count for at least one treatment');
+      return;
+    }
+    
     // Start loading
     setState(() => _isLoading = true);
     
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 2000));
+      // Prepare API call data
+      final dateTime = _formatDateTime();
+      final maleTreatmentIds = _getMaleTreatmentIds();
+      final femaleTreatmentIds = _getFemaleTreatmentIds();
+      final allTreatmentIds = _getAllTreatmentIds();
+      final executive = _getExecutiveName();
+      final branchId = _getBranchId(); // Get branch ID instead of name
       
-      // Success haptic feedback
-      HapticFeedback.lightImpact();
+      if (kDebugMode) {
+        print('=== PATIENT REGISTRATION DATA DEBUG ===');
+        print('Name: ${_nameController.text.trim()}');
+        print('Executive: $executive');
+        print('Payment: $_selectedPaymentOption');
+        print('Phone: ${_whatsappController.text.trim()}');
+        print('Address: ${_addressController.text.trim()}');
+        print('Total Amount: ${_totalAmountController.text}');
+        print('Discount Amount: ${_discountAmountController.text}');
+        print('Advance Amount: ${_advanceAmountController.text}');
+        print('Balance Amount: ${_balanceAmountController.text}');
+        print('Date Time: $dateTime');
+        print('Branch Name: $_selectedBranch');
+        print('Branch ID: $branchId'); // Log both name and ID
+        print('All Treatment IDs: $allTreatmentIds');
+        print('Male Treatment IDs: $maleTreatmentIds');
+        print('Female Treatment IDs: $femaleTreatmentIds');
+        print('Number of treatments: ${_treatments.length}');
+        for (int i = 0; i < _treatments.length; i++) {
+          print('Treatment $i: ID=${_treatments[i].id}, Name=${_treatments[i].name}, Male=${_treatments[i].maleCount}, Female=${_treatments[i].femaleCount}');
+        }
+        print('=========================================');
+      }
       
-      // Show success message
+      // Validate branch ID
+      if (branchId.isEmpty || branchId == '0') {
+        _showErrorSnackBar('Please select a valid branch');
+        return;
+      }
+      
+      // Call the patient registration API
+      final result = await ApiService.registerPatient(
+        name: _nameController.text.trim(),
+        executive: executive,
+        payment: _selectedPaymentOption,
+        phone: _whatsappController.text.trim(),
+        address: _addressController.text.trim(),
+        totalAmount: double.parse(_totalAmountController.text),
+        discountAmount: double.tryParse(_discountAmountController.text) ?? 0.0,
+        advanceAmount: double.parse(_advanceAmountController.text),
+        balanceAmount: double.tryParse(_balanceAmountController.text) ?? 0.0,
+        dateNdTime: dateTime,
+        branch: branchId, // Send branch ID instead of name
+        treatments: allTreatmentIds,
+        male: maleTreatmentIds.isNotEmpty ? maleTreatmentIds : null,
+        female: femaleTreatmentIds.isNotEmpty ? femaleTreatmentIds : null,
+      );
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('Registration saved successfully!'),
-              ],
+        if (result['success'] == true) {
+          // Success haptic feedback
+          HapticFeedback.lightImpact();
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Patient registered successfully!')),
+                ],
+              ),
+              backgroundColor: const Color(0xFF3D704D),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
-            backgroundColor: const Color(0xFF3D704D),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        
-        // Navigate back after a short delay
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) {
-            Navigator.pop(context);
+          );
+          
+          // Navigate back after a short delay
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (mounted) {
+              Navigator.pop(context, true); // Pass true to indicate success
+            }
+          });
+        } else {
+          // Handle API error
+          final errorMessage = result['message'] ?? 'Failed to register patient. Please try again.';
+          
+          // Check if authentication is required
+          if (result['requiresAuth'] == true) {
+            _showErrorSnackBar('Session expired. Please login again.');
+            // Could navigate to login page here if needed
+          } else {
+            _showErrorSnackBar(errorMessage);
           }
-        });
+        }
       }
     } catch (e) {
-      // Error handling
+      // Error handling for unexpected errors
       if (mounted) {
-        _showErrorSnackBar('Failed to save registration. Please try again.');
+        _showErrorSnackBar('An unexpected error occurred. Please try again.');
+        if (kDebugMode) {
+          print('Error in _handleSave: $e');
+        }
       }
     } finally {
       // Stop loading
