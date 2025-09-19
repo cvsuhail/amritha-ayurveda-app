@@ -8,6 +8,7 @@ class MinimalTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final VoidCallback? onTap;
   final bool enabled;
+  final int? maxLines;
 
   const MinimalTextField({
     super.key,
@@ -18,6 +19,7 @@ class MinimalTextField extends StatefulWidget {
     this.validator,
     this.onTap,
     this.enabled = true,
+    this.maxLines = 1,
   });
 
   @override
@@ -75,7 +77,10 @@ class MinimalTextFieldState extends State<MinimalTextField> {
       children: [
         // Minimal Text Field Container
         Container(
-          height: 56,
+          height: widget.maxLines != null && widget.maxLines! > 1 ? null : 56,
+          constraints: widget.maxLines != null && widget.maxLines! > 1 
+              ? const BoxConstraints(minHeight: 56) 
+              : null,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: const Color(0xFFF5F5F5),
@@ -98,7 +103,10 @@ class MinimalTextFieldState extends State<MinimalTextField> {
             obscureText: widget.obscureText,
             enabled: widget.enabled,
             onTap: widget.onTap,
-            textAlignVertical: TextAlignVertical.center,
+            maxLines: widget.maxLines,
+            textAlignVertical: widget.maxLines != null && widget.maxLines! > 1 
+                ? TextAlignVertical.top 
+                : TextAlignVertical.center,
             style: const TextStyle(
               fontSize: 16,
               color: Color(0xFF333333),

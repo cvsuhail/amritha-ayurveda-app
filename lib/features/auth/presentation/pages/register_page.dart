@@ -1,0 +1,1315 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../widgets/minimal_text_field.dart';
+import '../widgets/add_treatment_modal.dart';
+
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
+  @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  
+  // Controllers for all form fields
+  final _nameController = TextEditingController();
+  final _whatsappController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _totalAmountController = TextEditingController();
+  final _discountAmountController = TextEditingController();
+  final _advanceAmountController = TextEditingController();
+  final _balanceAmountController = TextEditingController();
+  
+  // Field keys for validation
+  final _nameFieldKey = GlobalKey<MinimalTextFieldState>();
+  final _whatsappFieldKey = GlobalKey<MinimalTextFieldState>();
+  final _addressFieldKey = GlobalKey<MinimalTextFieldState>();
+  final _totalAmountFieldKey = GlobalKey<MinimalTextFieldState>();
+  final _discountAmountFieldKey = GlobalKey<MinimalTextFieldState>();
+  final _advanceAmountFieldKey = GlobalKey<MinimalTextFieldState>();
+  final _balanceAmountFieldKey = GlobalKey<MinimalTextFieldState>();
+  
+  // Dropdown selections
+  String? _selectedLocation;
+  String? _selectedBranch;
+  String _selectedPaymentOption = 'Cash';
+  DateTime? _selectedDate;
+  String? _selectedHour;
+  String? _selectedMinute;
+  
+  // Loading state
+  bool _isLoading = false;
+  
+  // Treatment data
+  List<Treatment> _treatments = [
+    Treatment(name: 'Couple Combo package i..', maleCount: 2, femaleCount: 2)
+  ];
+  
+  // Animation controllers
+  late AnimationController _slideController;
+  late AnimationController _fadeController;
+  late AnimationController _scaleController;
+  late AnimationController _staggerController;
+  
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _staggerAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+    _startAnimations();
+    _setupAmountCalculation();
+  }
+
+  void _initializeAnimations() {
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    _staggerController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.easeInOut,
+    ));
+
+    _staggerAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _staggerController,
+      curve: Curves.easeOutCubic,
+    ));
+  }
+
+  void _startAnimations() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _slideController.forward();
+    });
+    
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _fadeController.forward();
+    });
+
+    Future.delayed(const Duration(milliseconds: 400), () {
+      _staggerController.forward();
+    });
+  }
+
+  void _setupAmountCalculation() {
+    _totalAmountController.addListener(_calculateBalance);
+    _discountAmountController.addListener(_calculateBalance);
+    _advanceAmountController.addListener(_calculateBalance);
+  }
+
+  void _calculateBalance() {
+    final total = double.tryParse(_totalAmountController.text) ?? 0.0;
+    final discount = double.tryParse(_discountAmountController.text) ?? 0.0;
+    final advance = double.tryParse(_advanceAmountController.text) ?? 0.0;
+    
+    final balance = total - discount - advance;
+    _balanceAmountController.text = balance > 0 ? balance.toString() : '0';
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    _fadeController.dispose();
+    _scaleController.dispose();
+    _staggerController.dispose();
+    
+    _nameController.dispose();
+    _whatsappController.dispose();
+    _addressController.dispose();
+    _totalAmountController.dispose();
+    _discountAmountController.dispose();
+    _advanceAmountController.dispose();
+    _balanceAmountController.dispose();
+    
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final isTablet = screenWidth > 600;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Image.asset(
+            'assets/icons/back.png',
+            width: 24,
+            height: 24,
+            color: const Color(0xFF333333),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Register',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            color: const Color(0xFF333333),
+            fontSize: isTablet ? 24 : 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Image.asset(
+              'assets/icons/notificaion.png',
+              width: 24,
+              height: 24,
+              color: const Color(0xFF333333),
+            ),
+            onPressed: () {
+              // Handle notifications
+            },
+          ),
+        ],
+      ),
+      body: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 32.0 : 20.0,
+                vertical: 16.0,
+              ),
+              child: AnimatedBuilder(
+                animation: _staggerAnimation,
+                builder: (context, child) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildAnimatedSection(_buildBasicInfoSection(), 0),
+                      const SizedBox(height: 24),
+                      _buildAnimatedSection(_buildLocationSection(), 1),
+                      const SizedBox(height: 24),
+                      _buildAnimatedSection(_buildTreatmentsSection(), 2),
+                      const SizedBox(height: 24),
+                      _buildAnimatedSection(_buildAmountSection(), 3),
+                      const SizedBox(height: 24),
+                      _buildAnimatedSection(_buildPaymentSection(), 4),
+                      const SizedBox(height: 24),
+                      _buildAnimatedSection(_buildDateTimeSection(), 5),
+                      const SizedBox(height: 32),
+                      _buildAnimatedSection(_buildSaveButton(), 6),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedSection(Widget child, int index) {
+    const double staggerDelay = 0.15;
+    final animationStart = (index * staggerDelay).clamp(0.0, 1.0);
+    final animationEnd = ((index * staggerDelay) + 0.3).clamp(0.0, 1.0);
+    
+    final opacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _staggerController,
+      curve: Interval(animationStart, animationEnd, curve: Curves.easeOut),
+    ));
+    
+    final slideOffset = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _staggerController,
+      curve: Interval(animationStart, animationEnd, curve: Curves.easeOutCubic),
+    ));
+    
+    return SlideTransition(
+      position: slideOffset,
+      child: FadeTransition(
+        opacity: opacity,
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Name'),
+        const SizedBox(height: 8),
+        MinimalTextField(
+          key: _nameFieldKey,
+          controller: _nameController,
+          hintText: 'Enter your full name',
+          validator: _validateName,
+        ),
+        
+        const SizedBox(height: 20),
+        _buildSectionLabel('Whatsapp Number'),
+        const SizedBox(height: 8),
+        MinimalTextField(
+          key: _whatsappFieldKey,
+          controller: _whatsappController,
+          hintText: 'Enter your Whatsapp number',
+          keyboardType: TextInputType.phone,
+          validator: _validateWhatsapp,
+        ),
+        
+        const SizedBox(height: 20),
+        _buildSectionLabel('Address'),
+        const SizedBox(height: 8),
+        MinimalTextField(
+          key: _addressFieldKey,
+          controller: _addressController,
+          hintText: 'Enter your full address',
+          maxLines: 2,
+          validator: _validateAddress,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Location'),
+        const SizedBox(height: 8),
+        _buildDropdown(
+          value: _selectedLocation,
+          hint: 'Choose your location',
+          items: ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur'],
+          onChanged: (value) => setState(() => _selectedLocation = value),
+        ),
+        
+        const SizedBox(height: 20),
+        _buildSectionLabel('Branch'),
+        const SizedBox(height: 8),
+        _buildDropdown(
+          value: _selectedBranch,
+          hint: 'Select the branch',
+          items: ['Main Branch', 'Medical Center', 'Wellness Center'],
+          onChanged: (value) => setState(() => _selectedBranch = value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTreatmentsSection() {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final isTablet = screenWidth > 600;
+    final isMobile = screenWidth < 480;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Treatments'),
+        const SizedBox(height: 16),
+        
+        // Responsive treatment list
+        if (isTablet && _treatments.length > 1)
+          // Grid layout for tablets with multiple treatments
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: isMobile ? 1.2 : 1.5,
+            ),
+            itemCount: _treatments.length,
+            itemBuilder: (context, index) {
+              return _buildTreatmentItem(_treatments[index], index);
+            },
+          )
+        else
+          // Single column layout for mobile or single treatment
+          Column(
+            children: _treatments.asMap().entries.map((entry) {
+              final index = entry.key;
+              final treatment = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildTreatmentItem(treatment, index),
+              );
+            }).toList(),
+          ),
+        
+        const SizedBox(height: 20),
+        _buildAddTreatmentButton(),
+      ],
+    );
+  }
+
+  Widget _buildTreatmentItem(Treatment treatment, int index) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final isTablet = screenWidth > 600;
+    final isMobile = screenWidth < 480;
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+      padding: EdgeInsets.all(isTablet ? 20 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF3D704D).withOpacity(0.1),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3D704D).withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: const Color(0xFF000000).withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header row with number and actions
+          Row(
+            children: [
+              Container(
+                width: isTablet ? 32 : 28,
+                height: isTablet ? 32 : 28,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3D704D), Color(0xFF2A5A3A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3D704D).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isTablet ? 14 : 12,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // Action buttons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildActionButton(
+                    icon: Icons.edit_outlined,
+                    color: const Color(0xFF3D704D),
+                    onTap: () {
+                      // Handle edit treatment
+                    },
+                  ),
+                  if (_treatments.length > 1) ...[
+                    const SizedBox(width: 8),
+                    _buildActionButton(
+                      icon: Icons.close,
+                      color: const Color(0xFFFF6B6B),
+                      onTap: () {
+                        setState(() => _treatments.removeAt(index));
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Treatment name
+          Text(
+            treatment.name,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: isTablet ? 16 : 15,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF333333),
+              height: 1.3,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Gender counters
+          if (isMobile)
+            Column(
+              children: [
+                _buildGenderCounter('Male', treatment.maleCount, (count) {
+                  setState(() => treatment.maleCount = count);
+                }),
+                const SizedBox(height: 12),
+                _buildGenderCounter('Female', treatment.femaleCount, (count) {
+                  setState(() => treatment.femaleCount = count);
+                }),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: _buildGenderCounter('Male', treatment.maleCount, (count) {
+                    setState(() => treatment.maleCount = count);
+                  }),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildGenderCounter('Female', treatment.femaleCount, (count) {
+                    setState(() => treatment.femaleCount = count);
+                  }),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGenderCounter(String gender, int count, Function(int) onChanged) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final isMobile = screenWidth < 480;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          gender,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF666666),
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF3D704D).withOpacity(0.15),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
+            children: [
+              _buildCounterButton(
+                icon: Icons.remove,
+                onTap: () => count > 0 ? onChanged(count - 1) : null,
+                isEnabled: count > 0,
+                isLeft: true,
+              ),
+              Container(
+                width: isMobile ? null : 40,
+                constraints: isMobile ? const BoxConstraints(minWidth: 40) : null,
+                height: 36,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                ),
+                child: Center(
+                  child: Text(
+                    count.toString(),
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ),
+              _buildCounterButton(
+                icon: Icons.add,
+                onTap: () => onChanged(count + 1),
+                isEnabled: true,
+                isLeft: false,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCounterButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    required bool isEnabled,
+    required bool isLeft,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isEnabled ? onTap : null,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(isLeft ? 12 : 0),
+          bottomLeft: Radius.circular(isLeft ? 12 : 0),
+          topRight: Radius.circular(isLeft ? 0 : 12),
+          bottomRight: Radius.circular(isLeft ? 0 : 12),
+        ),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: isEnabled 
+                ? const Color(0xFF3D704D).withOpacity(0.1)
+                : const Color(0xFFF0F0F0),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(isLeft ? 12 : 0),
+              bottomLeft: Radius.circular(isLeft ? 12 : 0),
+              topRight: Radius.circular(isLeft ? 0 : 12),
+              bottomRight: Radius.circular(isLeft ? 0 : 12),
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: isEnabled 
+                ? const Color(0xFF3D704D)
+                : const Color(0xFFCCCCCC),
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddTreatmentButton() {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final isTablet = screenWidth > 600;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _addTreatment,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(
+            vertical: isTablet ? 16 : 14,
+            horizontal: 20,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF3D704D).withOpacity(0.08),
+                const Color(0xFF3D704D).withOpacity(0.12),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFF3D704D).withOpacity(0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF3D704D).withOpacity(0.1),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3D704D).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: Color(0xFF3D704D),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Add Treatment',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: isTablet ? 16 : 15,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF3D704D),
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmountSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Total Amount'),
+        const SizedBox(height: 8),
+        MinimalTextField(
+          key: _totalAmountFieldKey,
+          controller: _totalAmountController,
+          hintText: 'Enter total amount',
+          keyboardType: TextInputType.number,
+          validator: _validateAmount,
+        ),
+        
+        const SizedBox(height: 20),
+        _buildSectionLabel('Discount Amount'),
+        const SizedBox(height: 8),
+        MinimalTextField(
+          key: _discountAmountFieldKey,
+          controller: _discountAmountController,
+          hintText: 'Enter discount amount',
+          keyboardType: TextInputType.number,
+        ),
+        
+        const SizedBox(height: 20),
+        _buildSectionLabel('Advance Amount'),
+        const SizedBox(height: 8),
+        MinimalTextField(
+          key: _advanceAmountFieldKey,
+          controller: _advanceAmountController,
+          hintText: 'Enter advance amount',
+          keyboardType: TextInputType.number,
+          validator: _validateAmount,
+        ),
+        
+        const SizedBox(height: 20),
+        _buildSectionLabel('Balance Amount'),
+        const SizedBox(height: 8),
+        MinimalTextField(
+          key: _balanceAmountFieldKey,
+          controller: _balanceAmountController,
+          hintText: 'Balance amount',
+          keyboardType: TextInputType.number,
+          enabled: false,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Payment Option'),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildPaymentOption('Cash'),
+            const SizedBox(width: 20),
+            _buildPaymentOption('Card'),
+            const SizedBox(width: 20),
+            _buildPaymentOption('UPI'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentOption(String option) {
+    final isSelected = _selectedPaymentOption == option;
+    return InkWell(
+      onTap: () => setState(() => _selectedPaymentOption = option),
+      borderRadius: BorderRadius.circular(20),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? const Color(0xFF3D704D) : const Color(0xFFCCCCCC),
+                width: 2,
+              ),
+            ),
+            child: isSelected
+                ? Center(
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF3D704D),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            option,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: isSelected ? const Color(0xFF3D704D) : const Color(0xFF666666),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateTimeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Treatment Date'),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: _selectDate,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedDate != null
+                        ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                        : 'Select date',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      color: _selectedDate != null ? const Color(0xFF333333) : const Color(0xFF999999),
+                    ),
+                  ),
+                ),
+                const Icon(Icons.calendar_today, color: Color(0xFF3D704D), size: 20),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 20),
+        _buildSectionLabel('Treatment Time'),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTimeDropdown(
+                'Hour', 
+                List.generate(24, (i) => i.toString().padLeft(2, '0')),
+                _selectedHour,
+                (value) => setState(() => _selectedHour = value),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTimeDropdown(
+                'Minutes', 
+                List.generate(60, (i) => i.toString().padLeft(2, '0')),
+                _selectedMinute,
+                (value) => setState(() => _selectedMinute = value),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimeDropdown(String label, List<String> items, String? selectedValue, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF666666),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F8F8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selectedValue,
+              hint: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  color: Color(0xFF999999),
+                ),
+              ),
+              items: items.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3D704D)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
+            width: double.infinity,
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: const Color(0xFF3D704D),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF3D704D).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isLoading ? null : _handleSave,
+                onTapDown: _isLoading ? null : (_) => _scaleController.forward(),
+                onTapUp: _isLoading ? null : (_) => _scaleController.reverse(),
+                onTapCancel: _isLoading ? null : () => _scaleController.reverse(),
+                borderRadius: BorderRadius.circular(16),
+                child: Center(
+                  child: _isLoading 
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Save',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF333333),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String? value,
+    required String hint,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(
+            hint,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              color: Color(0xFF999999),
+            ),
+          ),
+          items: items.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3D704D)),
+        ),
+      ),
+    );
+  }
+
+  // Validation methods
+  String? _validateName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Name is required';
+    }
+    if (value.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    return null;
+  }
+
+  String? _validateWhatsapp(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'WhatsApp number is required';
+    }
+    if (value.trim().length < 10) {
+      return 'Please enter a valid phone number';
+    }
+    return null;
+  }
+
+  String? _validateAddress(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Address is required';
+    }
+    if (value.trim().length < 10) {
+      return 'Please enter a complete address';
+    }
+    return null;
+  }
+
+  String? _validateAmount(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Amount is required';
+    }
+    final amount = double.tryParse(value);
+    if (amount == null || amount <= 0) {
+      return 'Please enter a valid amount';
+    }
+    return null;
+  }
+
+  // Action methods
+  void _addTreatment() {
+    showAddTreatmentModal(
+      context,
+      (String treatmentName, int maleCount, int femaleCount) {
+        setState(() {
+          _treatments.add(Treatment(
+            name: treatmentName,
+            maleCount: maleCount,
+            femaleCount: femaleCount,
+          ));
+        });
+      },
+    );
+  }
+
+  void _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF3D704D),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF333333),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _handleSave() async {
+    if (_isLoading) return;
+    
+    HapticFeedback.mediumImpact();
+    
+    // Validate required fields
+    final nameValid = _nameFieldKey.currentState?.validate() ?? false;
+    final whatsappValid = _whatsappFieldKey.currentState?.validate() ?? false;
+    final addressValid = _addressFieldKey.currentState?.validate() ?? false;
+    final totalAmountValid = _totalAmountFieldKey.currentState?.validate() ?? false;
+    final advanceAmountValid = _advanceAmountFieldKey.currentState?.validate() ?? false;
+    
+    // Check dropdowns
+    if (_selectedLocation == null) {
+      _showErrorSnackBar('Please select a location');
+      return;
+    }
+    
+    if (_selectedBranch == null) {
+      _showErrorSnackBar('Please select a branch');
+      return;
+    }
+    
+    if (_selectedDate == null) {
+      _showErrorSnackBar('Please select a treatment date');
+      return;
+    }
+    
+    if (_selectedHour == null || _selectedMinute == null) {
+      _showErrorSnackBar('Please select a treatment time');
+      return;
+    }
+    
+    if (!nameValid || !whatsappValid || !addressValid || !totalAmountValid || !advanceAmountValid) {
+      _showErrorSnackBar('Please fix the errors in the form');
+      return;
+    }
+    
+    // Start loading
+    setState(() => _isLoading = true);
+    
+    try {
+      // Simulate API call
+      await Future.delayed(const Duration(milliseconds: 2000));
+      
+      // Success haptic feedback
+      HapticFeedback.lightImpact();
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Registration saved successfully!'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF3D704D),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        
+        // Navigate back after a short delay
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            Navigator.pop(context);
+          }
+        });
+      }
+    } catch (e) {
+      // Error handling
+      if (mounted) {
+        _showErrorSnackBar('Failed to save registration. Please try again.');
+      }
+    } finally {
+      // Stop loading
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    HapticFeedback.selectionClick();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: const Color(0xFFFF6B6B),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+}
+
+// Treatment model class
+class Treatment {
+  String name;
+  int maleCount;
+  int femaleCount;
+
+  Treatment({
+    required this.name,
+    required this.maleCount,
+    required this.femaleCount,
+  });
+}
