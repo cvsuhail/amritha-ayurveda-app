@@ -6,6 +6,7 @@ class SearchSortSection extends StatefulWidget {
   final String selectedSortOption;
   final Function(String) onSearchChanged;
   final Function(String) onSortChanged;
+  final bool isLoading;
 
   const SearchSortSection({
     super.key,
@@ -13,6 +14,7 @@ class SearchSortSection extends StatefulWidget {
     required this.selectedSortOption,
     required this.onSearchChanged,
     required this.onSortChanged,
+    this.isLoading = false,
   });
 
   @override
@@ -65,14 +67,20 @@ class _SearchSortSectionState extends State<SearchSortSection>
 
   void _startAnimations() {
     Future.delayed(const Duration(milliseconds: 100), () {
-      _searchController.forward();
+      if (mounted) {
+        _searchController.forward();
+      }
     });
     Future.delayed(const Duration(milliseconds: 300), () {
-      _sortController.forward();
+      if (mounted) {
+        _sortController.forward();
+      }
     });
   }
 
   void _showSortOptions() {
+    if (widget.isLoading) return; // Don't show sort options when loading
+    
     HapticFeedback.lightImpact();
     
     showModalBottomSheet(
@@ -178,24 +186,36 @@ class _SearchSortSectionState extends State<SearchSortSection>
                         ),
                         child: TextField(
                           controller: widget.searchController,
-                          onChanged: widget.onSearchChanged,
-                          style: const TextStyle(
+                          onChanged: widget.isLoading ? null : widget.onSearchChanged,
+                          enabled: !widget.isLoading,
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF2C2C2C),
+                            color: widget.isLoading ? Colors.grey[400] : const Color(0xFF2C2C2C),
                             fontFamily: 'Poppins',
                           ),
-                          decoration: const InputDecoration(
-                            hintText: 'Search for treatments',
+                          decoration: InputDecoration(
+                            hintText: widget.isLoading ? 'Loading...' : 'Search for treatments',
                             hintStyle: TextStyle(
-                              color: Color(0xFF9E9E9E),
+                              color: widget.isLoading ? Colors.grey[400] : const Color(0xFF9E9E9E),
                               fontSize: 14,
                               fontFamily: 'Poppins',
                             ),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Color(0xFF9E9E9E),
-                              size: 20,
-                            ),
+                            prefixIcon: widget.isLoading
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        const Color(0xFF2E7D32).withOpacity(0.6),
+                                      ),
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.search,
+                                    color: const Color(0xFF9E9E9E),
+                                    size: 20,
+                                  ),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 16,
@@ -212,14 +232,14 @@ class _SearchSortSectionState extends State<SearchSortSection>
                       height: 48,
                       width: 80,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2E7D32),
+                        color: widget.isLoading ? Colors.grey[400] : const Color(0xFF2E7D32),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          onTap: () {
+                          onTap: widget.isLoading ? null : () {
                             HapticFeedback.lightImpact();
                             widget.onSearchChanged(widget.searchController.text);
                           },
@@ -266,17 +286,17 @@ class _SearchSortSectionState extends State<SearchSortSection>
                     
                     // Sort Dropdown
                     GestureDetector(
-                      onTap: _showSortOptions,
+                      onTap: widget.isLoading ? null : _showSortOptions,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: widget.isLoading ? Colors.grey[100] : Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFFE0E0E0),
+                            color: widget.isLoading ? Colors.grey[300]! : const Color(0xFFE0E0E0),
                             width: 1,
                           ),
                         ),
@@ -284,18 +304,18 @@ class _SearchSortSectionState extends State<SearchSortSection>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              widget.selectedSortOption,
-                              style: const TextStyle(
+                              widget.isLoading ? 'Loading...' : widget.selectedSortOption,
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Color(0xFF2C2C2C),
+                                color: widget.isLoading ? Colors.grey[400] : const Color(0xFF2C2C2C),
                                 fontWeight: FontWeight.w500,
                                 fontFamily: 'Poppins',
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(
+                            Icon(
                               Icons.keyboard_arrow_down,
-                              color: Color(0xFF2E7D32),
+                              color: widget.isLoading ? Colors.grey[400] : const Color(0xFF2E7D32),
                               size: 16,
                             ),
                           ],

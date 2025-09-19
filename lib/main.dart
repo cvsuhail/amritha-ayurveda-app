@@ -6,6 +6,7 @@ import 'core/constants/app_strings.dart';
 import 'core/services/api_service.dart';
 import 'features/splash/presentation/pages/splash_page.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/patients/presentation/providers/patient_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,7 @@ class AmrithaAyurvedaApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => PatientProvider()),
       ],
       child: MaterialApp(
         title: AppStrings.appName,
