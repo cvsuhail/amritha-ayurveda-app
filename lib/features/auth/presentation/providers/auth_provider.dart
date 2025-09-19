@@ -75,8 +75,8 @@ class AuthProvider extends ChangeNotifier {
         final userData = result['data'] as Map<String, dynamic>?;
         if (userData != null) {
           _userData = userData;
-          // You can store user data as JSON string if needed
-          // await StorageService.saveUserData(json.encode(userData));
+          // Store user data as JSON string
+          await StorageService.saveUserData(userData.toString());
         }
         
         _setState(AuthState.authenticated);

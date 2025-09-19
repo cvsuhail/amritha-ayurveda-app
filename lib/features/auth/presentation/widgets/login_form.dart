@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../patients/presentation/pages/patient_list_page.dart';
 import 'minimal_text_field.dart';
 
 class LoginForm extends StatefulWidget {
@@ -425,11 +426,43 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
       final password = _passwordController.text;
 
       if (authProvider.isLoginMode) {
-        authProvider.login(email, password);
+        authProvider.login(email, password).then((_) {
+          if (authProvider.state == AuthState.authenticated) {
+            _navigateToPatientList();
+          }
+        });
       } else {
-        authProvider.register(email, password);
+        authProvider.register(email, password).then((_) {
+          if (authProvider.state == AuthState.authenticated) {
+            _navigateToPatientList();
+          }
+        });
       }
     }
     // If validation fails, the MinimalTextField will automatically show errors
+  }
+
+  void _navigateToPatientList() {
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const PatientListPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+      (route) => false, // Remove all previous routes
+    );
   }
 }
