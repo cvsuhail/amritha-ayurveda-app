@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../patients/presentation/pages/patient_list_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -12,19 +15,35 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _navigateToLogin();
+    _checkAuthAndNavigate();
   }
 
-  void _navigateToLogin() async {
-    // Show splash for 2 seconds then navigate
+  void _checkAuthAndNavigate() async {
+    // Show splash for 2 seconds
     await Future.delayed(const Duration(seconds: 2));
     
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const LoginPage(),
-        ),
-      );
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Initialize auth state
+      await authProvider.initializeAuth();
+      
+      if (mounted) {
+        // Navigate based on authentication state
+        if (authProvider.state == AuthState.authenticated) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const PatientListPage(),
+            ),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const LoginPage(),
+            ),
+          );
+        }
+      }
     }
   }
 
