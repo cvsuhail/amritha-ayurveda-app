@@ -77,7 +77,10 @@ class _RevealAnimationWidgetState extends State<RevealAnimationWidget>
     _slideController.addStatusListener((status) {
       if (status == AnimationStatus.completed && !_hasBeenRevealed) {
         _hasBeenRevealed = true;
-        widget.onRevealed?.call();
+        // Schedule the callback for after the current build cycle
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          widget.onRevealed?.call();
+        });
       }
     });
   }

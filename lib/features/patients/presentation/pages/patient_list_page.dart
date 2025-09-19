@@ -4,17 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../widgets/patient_card.dart';
-import '../widgets/search_sort_section.dart';
-import '../widgets/patient_list_app_bar.dart';
-import '../widgets/patient_list_shimmer.dart';
-import '../widgets/empty_patient_list.dart';
-import '../widgets/loading_button.dart';
-import '../widgets/reveal_animation_widget.dart';
-import '../widgets/data_loading_reveal.dart';
+import '../widgets/simple_shimmer.dart';
 import '../../data/models/patient_model.dart';
 import '../providers/patient_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../auth/presentation/pages/register_page.dart';
 
 class PatientListPage extends StatefulWidget {
   const PatientListPage({super.key});
@@ -23,13 +18,7 @@ class PatientListPage extends StatefulWidget {
   State<PatientListPage> createState() => _PatientListPageState();
 }
 
-class _PatientListPageState extends State<PatientListPage>
-    with TickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
+class _PatientListPageState extends State<PatientListPage> {
   final TextEditingController _searchController = TextEditingController();
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = 
       GlobalKey<RefreshIndicatorState>();
@@ -37,67 +26,17 @@ class _PatientListPageState extends State<PatientListPage>
   // Track which patient cards are expanded
   final Set<String> _expandedPatients = {};
   
-  // Track which cards have been revealed (for animation)
-  final Set<String> _revealedCards = {};
-  
-  // Track if data has been loaded for reveal animation
-  bool _hasDataLoaded = false;
+  String _selectedSortOption = 'Date';
 
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
-    _startEntryAnimations();
     _loadInitialData();
   }
 
-  void _initializeAnimations() {
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-  }
-
-  void _startEntryAnimations() {
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) {
-        _fadeController.forward();
-      }
-    });
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) {
-        _slideController.forward();
-      }
-    });
-  }
 
   Future<void> _loadInitialData() async {
-    // Use WidgetsBinding to ensure the widget tree is fully built before loading data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Add a small delay to ensure all initialization is complete
-      await Future.delayed(const Duration(milliseconds: 100));
-      
       if (!mounted) return;
       
       final patientProvider = Provider.of<PatientProvider>(context, listen: false);
@@ -106,12 +45,10 @@ class _PatientListPageState extends State<PatientListPage>
       if (!success && mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         
-        // Debug: Print the error message to understand what's happening
         if (kDebugMode) {
           print('PatientListPage: Load failed with error: ${patientProvider.errorMessage}');
         }
         
-        // Check if authentication is required - be more specific about auth errors
         if (patientProvider.errorMessage.contains('Authentication required') ||
             patientProvider.errorMessage.contains('login again') || 
             patientProvider.errorMessage.contains('Session expired') ||
@@ -121,7 +58,6 @@ class _PatientListPageState extends State<PatientListPage>
           }
           await _handleAuthenticationRequired(authProvider);
         } else {
-          // For other errors, just show the error message without redirecting
           if (kDebugMode) {
             print('PatientListPage: Showing error snackbar instead of redirecting');
           }
@@ -134,25 +70,17 @@ class _PatientListPageState extends State<PatientListPage>
   Future<void> _onRefresh() async {
     final patientProvider = Provider.of<PatientProvider>(context, listen: false);
     
-    // Reset revealed cards and data loaded state on refresh
-    setState(() {
-      _revealedCards.clear();
-      _hasDataLoaded = false;
-    });
-    
     final success = await patientProvider.refreshPatients();
     
     if (!success && mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      // Check if authentication is required - be more specific about auth errors
       if (patientProvider.errorMessage.contains('Authentication required') ||
           patientProvider.errorMessage.contains('login again') || 
           patientProvider.errorMessage.contains('Session expired') ||
           patientProvider.errorMessage.contains('Unauthorized')) {
         await _handleAuthenticationRequired(authProvider);
       } else {
-        // For other errors, just show the error message without redirecting
         _showErrorSnackBar(patientProvider.errorMessage);
       }
     } else if (success && mounted) {
@@ -207,6 +135,9 @@ class _PatientListPageState extends State<PatientListPage>
   }
 
   void _onSortChanged(String sortOption) {
+    setState(() {
+      _selectedSortOption = sortOption;
+    });
     final patientProvider = Provider.of<PatientProvider>(context, listen: false);
     patientProvider.sortPatients(sortOption);
   }
@@ -224,24 +155,28 @@ class _PatientListPageState extends State<PatientListPage>
     });
   }
 
-  void _onCardRevealed(String patientId) {
-    setState(() {
-      _revealedCards.add(patientId);
-    });
-  }
 
   void _onRegisterNow() {
     HapticFeedback.mediumImpact();
-    // Navigate to registration page or show registration dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Opening registration form...'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+    // Navigate to registration page with smooth transition
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const RegisterPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
       ),
     );
   }
@@ -331,8 +266,6 @@ class _PatientListPageState extends State<PatientListPage>
 
   @override
   void dispose() {
-    _fadeController.dispose();
-    _slideController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -340,7 +273,7 @@ class _PatientListPageState extends State<PatientListPage>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false, // Prevent default back behavior
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           _showLogoutConfirmation();
@@ -353,65 +286,19 @@ class _PatientListPageState extends State<PatientListPage>
             builder: (context, patientProvider, child) {
               return Column(
                 children: [
-                  // App Bar
-                  PatientListAppBar(
-                    onBackPressed: () {
-                      HapticFeedback.lightImpact();
-                      _showLogoutConfirmation();
-                    },
-                    onNotificationPressed: () {
-                      HapticFeedback.lightImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('No new notifications'),
-                          backgroundColor: AppColors.primary,
-                          behavior: SnackBarBehavior.floating,
-                          margin: EdgeInsets.all(16),
-                        ),
-                      );
-                    },
-                  ),
+                  // Custom App Bar
+                  _buildAppBar(),
 
                   // Search and Sort Section
-                  AnimatedBuilder(
-                    animation: _slideAnimation,
-                    builder: (context, child) {
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: SearchSortSection(
-                            searchController: _searchController,
-                            selectedSortOption: patientProvider.sortOption,
-                            onSearchChanged: _onSearchChanged,
-                            onSortChanged: _onSortChanged,
-                            isLoading: patientProvider.isLoading,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  _buildSearchAndSort(patientProvider),
 
                   // Patient List Content
                   Expanded(
                     child: _buildPatientListContent(patientProvider),
                   ),
 
-                  // Register Now Button (Always visible, shows loading state)
-                  AnimatedBuilder(
-                    animation: _fadeAnimation,
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimation,
-                        child: LoadingButton(
-                          isLoading: patientProvider.isLoading,
-                          onPressed: patientProvider.isLoading ? null : _onRegisterNow,
-                          text: 'Register Now',
-                          loadingText: 'Loading Patients...',
-                        ),
-                      );
-                    },
-                  ),
+                  // Register Now Button
+                  _buildRegisterButton(patientProvider),
                 ],
               );
             },
@@ -421,127 +308,414 @@ class _PatientListPageState extends State<PatientListPage>
     );
   }
 
+  Widget _buildAppBar() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          // Back Button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _showLogoutConfirmation();
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Image.asset(
+                  'assets/icons/back.png',
+                  width: 20,
+                  height: 20,
+                ),
+              ),
+            ),
+          ),
+          
+          const Spacer(),
+          
+          // Notification Button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No new notifications'),
+                  backgroundColor: AppColors.primary,
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.all(16),
+                ),
+              );
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Image.asset(
+                      'assets/icons/notificaion.png',
+                      width: 20,
+                      height: 20,
+                    ),
+                  ),
+                  // Red notification dot
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndSort(PatientProvider patientProvider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          // Search Bar with Button
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'Poppins',
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search for treatments',
+                      hintStyle: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                        color: AppColors.textSecondary.withOpacity(0.7),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Search Button
+              Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Center(
+                  child: Text(
+                    'Search',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Sort Section
+          Row(
+            children: [
+              const Text(
+                'Sort by :',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const Spacer(),
+              // Sort Dropdown
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedSortOption,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppColors.textSecondary,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                      fontFamily: 'Poppins',
+                    ),
+                    items: ['Date', 'Name', 'Amount'].map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        _onSortChanged(newValue);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegisterButton(PatientProvider patientProvider) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.all(20),
+      child: ElevatedButton(
+        onPressed: patientProvider.isLoading ? null : _onRegisterNow,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: Text(
+          patientProvider.isLoading ? 'Loading...' : 'Register Now',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Poppins',
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPatientListContent(PatientProvider patientProvider) {
-    // Show loading shimmer - ensure it shows immediately during loading
+    // Show loading state with shimmer
     if (patientProvider.isLoading) {
-      if (kDebugMode) {
-        print('PatientListPage: Showing shimmer - isLoading: ${patientProvider.isLoading}');
-      }
-      // Reset data loaded state when loading starts
-      _hasDataLoaded = false;
-      return AnimatedBuilder(
-        animation: _fadeAnimation,
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: const PatientListShimmer(),
-          );
-        },
-      );
+      return const PatientListShimmer();
     }
 
     // Show error state with retry option
     if (patientProvider.hasError && !patientProvider.hasPatients) {
-      return AnimatedBuilder(
-        animation: _fadeAnimation,
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: EmptyPatientList(
-              message: 'Failed to Load Patients',
-              subtitle: patientProvider.errorMessage,
-              onRefresh: _loadInitialData,
-              showRefreshButton: true,
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppColors.textSecondary,
             ),
-          );
-        },
+            const SizedBox(height: 16),
+            Text(
+              'Failed to Load Patients',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              patientProvider.errorMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadInitialData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       );
     }
 
     // Show empty state when no patients
     if (!patientProvider.hasPatients) {
-      return AnimatedBuilder(
-        animation: _fadeAnimation,
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: EmptyPatientList(
-              message: 'No Patients Available',
-              subtitle: 'There are no patients to display at the moment.\nPull down to refresh.',
-              onRefresh: _onRefresh,
-              showRefreshButton: false,
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.people_outline,
+              size: 64,
+              color: AppColors.textSecondary,
             ),
-          );
-        },
+            const SizedBox(height: 16),
+            const Text(
+              'No Patients Available',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'There are no patients to display at the moment.\nPull down to refresh.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ],
+        ),
       );
     }
 
     // Show empty search results
     if (patientProvider.filteredPatients.isEmpty && 
         patientProvider.searchQuery.isNotEmpty) {
-      return AnimatedBuilder(
-        animation: _fadeAnimation,
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: EmptySearchResults(
-              searchQuery: patientProvider.searchQuery,
-              onClearSearch: () {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.search_off,
+              size: 64,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No Results Found',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No patients found for "${patientProvider.searchQuery}"',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextButton(
+              onPressed: () {
                 _searchController.clear();
                 _onSearchChanged('');
               },
+              child: const Text('Clear Search'),
             ),
-          );
-        },
+          ],
+        ),
       );
     }
 
-    // Mark data as loaded when we reach this point
-    if (!_hasDataLoaded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {
-          _hasDataLoaded = true;
-        });
-      });
-    }
-
-    // Show patient list with pull-to-refresh and reveal animations
-    return DataLoadingReveal(
-      isDataLoaded: _hasDataLoaded,
-      delay: const Duration(milliseconds: 100),
-      child: RefreshIndicator(
-        key: _refreshIndicatorKey,
-        onRefresh: _onRefresh,
-        color: const Color(0xFF2E7D32),
-        backgroundColor: Colors.white,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
-          itemCount: patientProvider.filteredPatients.length,
-          itemBuilder: (context, index) {
-            final patient = patientProvider.filteredPatients[index];
-            final hasBeenRevealed = _revealedCards.contains(patient.id);
-            
-            return RevealAnimationWidget(
-              index: index,
-              delay: const Duration(milliseconds: 50),
-              shouldAnimate: _hasDataLoaded && !hasBeenRevealed,
-              onRevealed: () => _onCardRevealed(patient.id),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: PatientCard(
-                  patient: patient,
-                  index: index + 1,
-                  isExpanded: _expandedPatients.contains(patient.id),
-                  onViewDetails: () => _onToggleExpanded(patient),
-                  onToggleExpanded: () => _onToggleExpanded(patient),
-                ),
-              ),
-            );
-          },
+    // Show optimized patient list with smooth scrolling
+    return RefreshIndicator(
+      key: _refreshIndicatorKey,
+      onRefresh: _onRefresh,
+      color: AppColors.primary,
+      backgroundColor: Colors.white,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
         ),
+        itemCount: patientProvider.filteredPatients.length,
+        physics: const AlwaysScrollableScrollPhysics(), // Ensures smooth scrolling
+        itemBuilder: (context, index) {
+          final patient = patientProvider.filteredPatients[index];
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: PatientCard(
+              patient: patient,
+              index: index + 1,
+              isExpanded: _expandedPatients.contains(patient.id),
+              onViewDetails: () => _onToggleExpanded(patient),
+              onToggleExpanded: () => _onToggleExpanded(patient),
+            ),
+          );
+        },
       ),
     );
   }
