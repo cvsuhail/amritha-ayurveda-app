@@ -39,6 +39,9 @@ dependencies:
   
   # SharedPreferences for local storage
   shared_preferences: ^2.2.2
+  
+  # Shimmer loading effect
+  shimmer: ^3.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

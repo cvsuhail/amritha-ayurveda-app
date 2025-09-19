@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -5,7 +6,13 @@ import '../../../../core/constants/app_colors.dart';
 import '../widgets/patient_card.dart';
 import '../widgets/search_sort_section.dart';
 import '../widgets/patient_list_app_bar.dart';
+import '../widgets/patient_list_shimmer.dart';
+import '../widgets/empty_patient_list.dart';
+import '../widgets/loading_button.dart';
+import '../widgets/reveal_animation_widget.dart';
+import '../widgets/data_loading_reveal.dart';
 import '../../data/models/patient_model.dart';
+import '../providers/patient_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 
@@ -24,17 +31,24 @@ class _PatientListPageState extends State<PatientListPage>
   late Animation<Offset> _slideAnimation;
 
   final TextEditingController _searchController = TextEditingController();
-  String _selectedSortOption = 'Date';
-  List<PatientModel> _patients = [];
-  List<PatientModel> _filteredPatients = [];
-  PatientModel? _selectedPatient;
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = 
+      GlobalKey<RefreshIndicatorState>();
+  
+  // Track which patient cards are expanded
+  final Set<String> _expandedPatients = {};
+  
+  // Track which cards have been revealed (for animation)
+  final Set<String> _revealedCards = {};
+  
+  // Track if data has been loaded for reveal animation
+  bool _hasDataLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
-    _loadPatients();
     _startEntryAnimations();
+    _loadInitialData();
   }
 
   void _initializeAnimations() {
@@ -67,142 +81,171 @@ class _PatientListPageState extends State<PatientListPage>
 
   void _startEntryAnimations() {
     Future.delayed(const Duration(milliseconds: 100), () {
-      _fadeController.forward();
+      if (mounted) {
+        _fadeController.forward();
+      }
     });
     Future.delayed(const Duration(milliseconds: 200), () {
-      _slideController.forward();
-    });
-  }
-
-  void _loadPatients() {
-    // Sample data matching the image
-    _patients = [
-      PatientModel(
-        id: '1',
-        name: 'Vikram Singh',
-        packageDescription: 'Couple Combo Package (Rejuvenation Therapy)',
-        date: DateTime(2024, 1, 31),
-        assignedPerson: 'Jithesh',
-      ),
-      PatientModel(
-        id: '2',
-        name: 'Priya Sharma',
-        packageDescription: 'Wellness Package (Detox Therapy)',
-        date: DateTime(2024, 2, 1),
-        assignedPerson: 'Dr. Kumar',
-      ),
-      PatientModel(
-        id: '3',
-        name: 'Rajesh Patel',
-        packageDescription: 'Family Package (Stress Relief)',
-        date: DateTime(2024, 2, 2),
-        assignedPerson: 'Anita',
-      ),
-      PatientModel(
-        id: '4',
-        name: 'Sneha Reddy',
-        packageDescription: 'Premium Package (Anti-Aging)',
-        date: DateTime(2024, 2, 3),
-        assignedPerson: 'Dr. Singh',
-      ),
-      PatientModel(
-        id: '5',
-        name: 'Amit Kumar',
-        packageDescription: 'Basic Package (Relaxation)',
-        date: DateTime(2024, 2, 4),
-        assignedPerson: 'Jithesh',
-      ),
-    ];
-    _filteredPatients = List.from(_patients);
-  }
-
-  void _onSearchChanged(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredPatients = List.from(_patients);
-      } else {
-        _filteredPatients = _patients
-            .where((patient) =>
-                patient.name.toLowerCase().contains(query.toLowerCase()) ||
-                patient.packageDescription
-                    .toLowerCase()
-                    .contains(query.toLowerCase()))
-            .toList();
+      if (mounted) {
+        _slideController.forward();
       }
     });
   }
 
-  void _onSortChanged(String sortOption) {
-    setState(() {
-      _selectedSortOption = sortOption;
-      _filteredPatients.sort((a, b) {
-        switch (sortOption) {
-          case 'Date':
-            return b.date.compareTo(a.date); // Newest first
-          case 'Name':
-            return a.name.compareTo(b.name);
-          case 'Package':
-            return a.packageDescription.compareTo(b.packageDescription);
-          default:
-            return 0;
+  Future<void> _loadInitialData() async {
+    // Use WidgetsBinding to ensure the widget tree is fully built before loading data
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Add a small delay to ensure all initialization is complete
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      if (!mounted) return;
+      
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      final success = await patientProvider.loadPatients();
+      
+      if (!success && mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        
+        // Debug: Print the error message to understand what's happening
+        if (kDebugMode) {
+          print('PatientListPage: Load failed with error: ${patientProvider.errorMessage}');
         }
-      });
+        
+        // Check if authentication is required - be more specific about auth errors
+        if (patientProvider.errorMessage.contains('Authentication required') ||
+            patientProvider.errorMessage.contains('login again') || 
+            patientProvider.errorMessage.contains('Session expired') ||
+            patientProvider.errorMessage.contains('Unauthorized')) {
+          if (kDebugMode) {
+            print('PatientListPage: Redirecting to login due to auth error');
+          }
+          await _handleAuthenticationRequired(authProvider);
+        } else {
+          // For other errors, just show the error message without redirecting
+          if (kDebugMode) {
+            print('PatientListPage: Showing error snackbar instead of redirecting');
+          }
+          _showErrorSnackBar(patientProvider.errorMessage);
+        }
+      }
     });
   }
 
-  void _onViewDetails(PatientModel patient) {
-    // Add haptic feedback
-    HapticFeedback.lightImpact();
+  Future<void> _onRefresh() async {
+    final patientProvider = Provider.of<PatientProvider>(context, listen: false);
     
-    // Show details dialog or navigate to details page
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(patient.name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Package: ${patient.packageDescription}'),
-            const SizedBox(height: 8),
-            Text('Date: ${_formatDate(patient.date)}'),
-            const SizedBox(height: 8),
-            Text('Assigned to: ${patient.assignedPerson}'),
-          ],
+    // Reset revealed cards and data loaded state on refresh
+    setState(() {
+      _revealedCards.clear();
+      _hasDataLoaded = false;
+    });
+    
+    final success = await patientProvider.refreshPatients();
+    
+    if (!success && mounted) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Check if authentication is required - be more specific about auth errors
+      if (patientProvider.errorMessage.contains('Authentication required') ||
+          patientProvider.errorMessage.contains('login again') || 
+          patientProvider.errorMessage.contains('Session expired') ||
+          patientProvider.errorMessage.contains('Unauthorized')) {
+        await _handleAuthenticationRequired(authProvider);
+      } else {
+        // For other errors, just show the error message without redirecting
+        _showErrorSnackBar(patientProvider.errorMessage);
+      }
+    } else if (success && mounted) {
+      _showSuccessSnackBar('Patient list refreshed successfully');
+    }
+  }
+
+  Future<void> _handleAuthenticationRequired(AuthProvider authProvider) async {
+    await authProvider.logout();
+    
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const LoginPage(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
+        (route) => false,
+      );
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
 
-  void _onPatientSelected(PatientModel patient) {
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF2E7D32),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  void _onSearchChanged(String query) {
+    final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+    patientProvider.searchPatients(query);
+  }
+
+  void _onSortChanged(String sortOption) {
+    final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+    patientProvider.sortPatients(sortOption);
+  }
+
+
+
+
+  void _onToggleExpanded(PatientModel patient) {
     setState(() {
-      _selectedPatient = patient;
+      if (_expandedPatients.contains(patient.id)) {
+        _expandedPatients.remove(patient.id);
+      } else {
+        _expandedPatients.add(patient.id);
+      }
     });
-    HapticFeedback.lightImpact();
+  }
+
+  void _onCardRevealed(String patientId) {
+    setState(() {
+      _revealedCards.add(patientId);
+    });
   }
 
   void _onRegisterNow() {
-    if (_selectedPatient == null) return;
-    
     HapticFeedback.mediumImpact();
     // Navigate to registration page or show registration dialog
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Registering ${_selectedPatient!.name}...'),
+        content: const Text('Opening registration form...'),
         backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
 
   void _showLogoutConfirmation() {
     showDialog(
@@ -306,153 +349,199 @@ class _PatientListPageState extends State<PatientListPage>
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
-        child: Column(
-          children: [
-            // App Bar
-            PatientListAppBar(
-              onBackPressed: () {
-                HapticFeedback.lightImpact();
-                _showLogoutConfirmation();
-              },
-              onNotificationPressed: () {
-                HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('No new notifications'),
-                    backgroundColor: AppColors.primary,
+          child: Consumer<PatientProvider>(
+            builder: (context, patientProvider, child) {
+              return Column(
+                children: [
+                  // App Bar
+                  PatientListAppBar(
+                    onBackPressed: () {
+                      HapticFeedback.lightImpact();
+                      _showLogoutConfirmation();
+                    },
+                    onNotificationPressed: () {
+                      HapticFeedback.lightImpact();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No new notifications'),
+                          backgroundColor: AppColors.primary,
+                          behavior: SnackBarBehavior.floating,
+                          margin: EdgeInsets.all(16),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
 
-            // Search and Sort Section
-            AnimatedBuilder(
-              animation: _slideAnimation,
-              builder: (context, child) {
-                return SlideTransition(
-                  position: _slideAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SearchSortSection(
-                      searchController: _searchController,
-                      selectedSortOption: _selectedSortOption,
-                      onSearchChanged: _onSearchChanged,
-                      onSortChanged: _onSortChanged,
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            // Patient List
-            Expanded(
-              child: AnimatedBuilder(
-                animation: _fadeAnimation,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: _filteredPatients.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.search_off,
-                                  size: 64,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No patients found',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Try adjusting your search criteria',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            itemCount: _filteredPatients.length,
-                            itemBuilder: (context, index) {
-                              final patient = _filteredPatients[index];
-                              return AnimatedContainer(
-                                duration: Duration(
-                                  milliseconds: 300 + (index * 100),
-                                ),
-                                curve: Curves.easeOutCubic,
-                                margin: const EdgeInsets.only(bottom: 16),
-                                child: PatientCard(
-                                  patient: patient,
-                                  index: index + 1,
-                                  isSelected: _selectedPatient?.id == patient.id,
-                                  onViewDetails: () => _onViewDetails(patient),
-                                  onPatientSelected: () => _onPatientSelected(patient),
-                                ),
-                              );
-                            },
-                          ),
-                  );
-                },
-              ),
-            ),
-
-            // Register Now Button
-            AnimatedBuilder(
-              animation: _fadeAnimation,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _selectedPatient != null ? _onRegisterNow : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectedPatient != null 
-                              ? const Color(0xFF2E7D32) 
-                              : Colors.grey[400],
-                          foregroundColor: Colors.white,
-                          elevation: _selectedPatient != null ? 4 : 0,
-                          shadowColor: _selectedPatient != null 
-                              ? const Color(0xFF2E7D32).withOpacity(0.3) 
-                              : Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                  // Search and Sort Section
+                  AnimatedBuilder(
+                    animation: _slideAnimation,
+                    builder: (context, child) {
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: SearchSortSection(
+                            searchController: _searchController,
+                            selectedSortOption: patientProvider.sortOption,
+                            onSearchChanged: _onSearchChanged,
+                            onSortChanged: _onSortChanged,
+                            isLoading: patientProvider.isLoading,
                           ),
                         ),
-                        child: const Text(
-                          'Register Now',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ],
+
+                  // Patient List Content
+                  Expanded(
+                    child: _buildPatientListContent(patientProvider),
+                  ),
+
+                  // Register Now Button (Always visible, shows loading state)
+                  AnimatedBuilder(
+                    animation: _fadeAnimation,
+                    builder: (context, child) {
+                      return FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: LoadingButton(
+                          isLoading: patientProvider.isLoading,
+                          onPressed: patientProvider.isLoading ? null : _onRegisterNow,
+                          text: 'Register Now',
+                          loadingText: 'Loading Patients...',
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPatientListContent(PatientProvider patientProvider) {
+    // Show loading shimmer - ensure it shows immediately during loading
+    if (patientProvider.isLoading) {
+      if (kDebugMode) {
+        print('PatientListPage: Showing shimmer - isLoading: ${patientProvider.isLoading}');
+      }
+      // Reset data loaded state when loading starts
+      _hasDataLoaded = false;
+      return AnimatedBuilder(
+        animation: _fadeAnimation,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: const PatientListShimmer(),
+          );
+        },
+      );
+    }
+
+    // Show error state with retry option
+    if (patientProvider.hasError && !patientProvider.hasPatients) {
+      return AnimatedBuilder(
+        animation: _fadeAnimation,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: EmptyPatientList(
+              message: 'Failed to Load Patients',
+              subtitle: patientProvider.errorMessage,
+              onRefresh: _loadInitialData,
+              showRefreshButton: true,
+            ),
+          );
+        },
+      );
+    }
+
+    // Show empty state when no patients
+    if (!patientProvider.hasPatients) {
+      return AnimatedBuilder(
+        animation: _fadeAnimation,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: EmptyPatientList(
+              message: 'No Patients Available',
+              subtitle: 'There are no patients to display at the moment.\nPull down to refresh.',
+              onRefresh: _onRefresh,
+              showRefreshButton: false,
+            ),
+          );
+        },
+      );
+    }
+
+    // Show empty search results
+    if (patientProvider.filteredPatients.isEmpty && 
+        patientProvider.searchQuery.isNotEmpty) {
+      return AnimatedBuilder(
+        animation: _fadeAnimation,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: EmptySearchResults(
+              searchQuery: patientProvider.searchQuery,
+              onClearSearch: () {
+                _searchController.clear();
+                _onSearchChanged('');
+              },
+            ),
+          );
+        },
+      );
+    }
+
+    // Mark data as loaded when we reach this point
+    if (!_hasDataLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _hasDataLoaded = true;
+        });
+      });
+    }
+
+    // Show patient list with pull-to-refresh and reveal animations
+    return DataLoadingReveal(
+      isDataLoaded: _hasDataLoaded,
+      delay: const Duration(milliseconds: 100),
+      child: RefreshIndicator(
+        key: _refreshIndicatorKey,
+        onRefresh: _onRefresh,
+        color: const Color(0xFF2E7D32),
+        backgroundColor: Colors.white,
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
+          itemCount: patientProvider.filteredPatients.length,
+          itemBuilder: (context, index) {
+            final patient = patientProvider.filteredPatients[index];
+            final hasBeenRevealed = _revealedCards.contains(patient.id);
+            
+            return RevealAnimationWidget(
+              index: index,
+              delay: const Duration(milliseconds: 50),
+              shouldAnimate: _hasDataLoaded && !hasBeenRevealed,
+              onRevealed: () => _onCardRevealed(patient.id),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: PatientCard(
+                  patient: patient,
+                  index: index + 1,
+                  isExpanded: _expandedPatients.contains(patient.id),
+                  onViewDetails: () => _onToggleExpanded(patient),
+                  onToggleExpanded: () => _onToggleExpanded(patient),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

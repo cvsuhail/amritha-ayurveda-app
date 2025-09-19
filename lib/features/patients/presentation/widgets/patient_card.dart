@@ -5,17 +5,17 @@ import '../../data/models/patient_model.dart';
 class PatientCard extends StatefulWidget {
   final PatientModel patient;
   final int index;
-  final bool isSelected;
   final VoidCallback onViewDetails;
-  final VoidCallback onPatientSelected;
+  final bool isExpanded;
+  final VoidCallback onToggleExpanded;
 
   const PatientCard({
     super.key,
     required this.patient,
     required this.index,
-    required this.isSelected,
     required this.onViewDetails,
-    required this.onPatientSelected,
+    this.isExpanded = false,
+    required this.onToggleExpanded,
   });
 
   @override
@@ -25,9 +25,7 @@ class PatientCard extends StatefulWidget {
 class _PatientCardState extends State<PatientCard>
     with TickerProviderStateMixin {
   late AnimationController _scaleController;
-  late AnimationController _fadeController;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
 
   bool _isPressed = false;
 
@@ -35,17 +33,11 @@ class _PatientCardState extends State<PatientCard>
   void initState() {
     super.initState();
     _initializeAnimations();
-    _startAnimations();
   }
 
   void _initializeAnimations() {
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
@@ -56,25 +48,43 @@ class _PatientCardState extends State<PatientCard>
       parent: _scaleController,
       curve: Curves.easeInOut,
     ));
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-  }
-
-  void _startAnimations() {
-    // Staggered animation based on index
-    Future.delayed(Duration(milliseconds: 200 + (widget.index * 100)), () {
-      _fadeController.forward();
-    });
   }
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Color(0xFF2C2C2C),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Color(0xFF2C2C2C),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onCardPressed() {
@@ -85,7 +95,7 @@ class _PatientCardState extends State<PatientCard>
     });
     
     HapticFeedback.lightImpact();
-    widget.onPatientSelected();
+    widget.onToggleExpanded();
     _scaleController.forward().then((_) {
       _scaleController.reverse().then((_) {
         setState(() {
@@ -103,20 +113,14 @@ class _PatientCardState extends State<PatientCard>
   @override
   void dispose() {
     _scaleController.dispose();
-    _fadeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _fadeAnimation,
+      animation: _scaleAnimation,
       builder: (context, child) {
-        return FadeTransition(
-          opacity: _fadeAnimation,
-          child: AnimatedBuilder(
-            animation: _scaleAnimation,
-            builder: (context, child) {
               return Transform.scale(
                 scale: _scaleAnimation.value,
                 child: Container(
@@ -124,17 +128,13 @@ class _PatientCardState extends State<PatientCard>
                     color: const Color(0xFFF8F9FA),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: widget.isSelected 
-                          ? const Color(0xFF2E7D32) 
-                          : const Color(0xFFE0E0E0),
-                      width: widget.isSelected ? 2 : 1,
+                      color: const Color(0xFFE0E0E0),
+                      width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: widget.isSelected 
-                            ? const Color(0xFF2E7D32).withOpacity(0.2)
-                            : Colors.black.withOpacity(0.05),
-                        blurRadius: widget.isSelected ? 12 : 8,
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -252,7 +252,7 @@ class _PatientCardState extends State<PatientCard>
 
                             const SizedBox(height: 8),
 
-                            // View Details Button
+                            // Expand/Collapse Button
                             GestureDetector(
                               onTap: _onViewDetailsPressed,
                               child: Container(
@@ -261,9 +261,9 @@ class _PatientCardState extends State<PatientCard>
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text(
-                                      'View Booking details',
-                                      style: TextStyle(
+                                    Text(
+                                      widget.isExpanded ? 'Hide details' : 'View Booking details',
+                                      style: const TextStyle(
                                         fontSize: 14,
                                         color: Color(0xFF2C2C2C),
                                         fontWeight: FontWeight.w500,
@@ -271,14 +271,46 @@ class _PatientCardState extends State<PatientCard>
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    const Icon(
-                                      Icons.arrow_forward_ios,
-                                      color: Color(0xFF2E7D32),
-                                      size: 14,
+                                    AnimatedRotation(
+                                      turns: widget.isExpanded ? 0.5 : 0,
+                                      duration: const Duration(milliseconds: 200),
+                                      child: const Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: Color(0xFF2E7D32),
+                                        size: 18,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
+                            ),
+
+                            // Expanded Details Section
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              height: widget.isExpanded ? null : 0,
+                              child: widget.isExpanded
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 12),
+                                        const Divider(color: Color(0xFFE0E0E0)),
+                                        const SizedBox(height: 12),
+                                        
+                                        // Phone Number
+                                        if (widget.patient.phone != null && widget.patient.phone!.isNotEmpty)
+                                          _buildDetailRow('Phone:', widget.patient.phone!),
+                                        
+                                        // Total Amount
+                                        if (widget.patient.totalAmount != null && widget.patient.totalAmount!.isNotEmpty)
+                                          _buildDetailRow('Total Amount:', '₹${widget.patient.totalAmount}'),
+                                        
+                                        // Additional details can be added here
+                                        const SizedBox(height: 8),
+                                      ],
+                                    )
+                                  : const SizedBox.shrink(),
                             ),
                           ],
                         ),
@@ -287,9 +319,6 @@ class _PatientCardState extends State<PatientCard>
                   ),
                 ),
               );
-            },
-          ),
-        );
       },
     );
   }

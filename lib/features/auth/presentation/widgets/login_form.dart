@@ -426,14 +426,18 @@ class _LoginFormState extends State<LoginForm> with TickerProviderStateMixin {
       final password = _passwordController.text;
 
       if (authProvider.isLoginMode) {
-        authProvider.login(email, password).then((_) {
+        authProvider.login(email, password).then((_) async {
           if (authProvider.state == AuthState.authenticated) {
+            // Add a small delay to ensure token is properly stored
+            await Future.delayed(const Duration(milliseconds: 500));
             _navigateToPatientList();
           }
         });
       } else {
-        authProvider.register(email, password).then((_) {
+        authProvider.register(email, password).then((_) async {
           if (authProvider.state == AuthState.authenticated) {
+            // Add a small delay to ensure token is properly stored
+            await Future.delayed(const Duration(milliseconds: 500));
             _navigateToPatientList();
           }
         });

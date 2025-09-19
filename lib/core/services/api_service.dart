@@ -187,6 +187,105 @@ class ApiService {
     }
   }
   
+  // Patient List API
+  static Future<Map<String, dynamic>> getPatientList() async {
+    try {
+      final token = await StorageService.getToken();
+      if (kDebugMode) {
+        print('Fetching patient list...');
+        print('API URL: $baseUrl/PatientList');
+        print('Retrieved token from storage: ${token != null ? '${token.substring(0, 20)}...' : 'null'}');
+      }
+      
+      if (token == null || token.isEmpty) {
+        if (kDebugMode) {
+          print('No token found in storage, authentication required');
+        }
+        return {
+          'success': false,
+          'message': 'Authentication required. Please login again.',
+          'requiresAuth': true,
+        };
+      }
+
+      // Make GET request with Authorization header
+      final response = await _dio.get(
+        '/PatientList',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+
+      if (kDebugMode) {
+        print('Patient List API Response status: ${response.statusCode}');
+        print('Patient List API Response data: ${response.data}');
+      }
+
+      final Map<String, dynamic> responseData = response.data;
+
+      if (responseData['status'] == true || responseData['success'] == true) {
+        return {
+          'success': true,
+          'data': responseData['patient'] ?? responseData['patient_list'] ?? responseData['data'] ?? [],
+          'message': responseData['message'] ?? 'Patient list fetched successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Failed to fetch patient list',
+          'data': [],
+        };
+      }
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        print('Patient List DioException type: ${e.type}');
+        print('Patient List DioException message: ${e.message}');
+        print('Patient List DioException response: ${e.response?.data}');
+        print('Patient List DioException status code: ${e.response?.statusCode}');
+      }
+
+      String errorMessage = 'Network error. Please check your internet connection.';
+
+      if (e.response != null) {
+        final responseData = e.response!.data;
+        if (responseData is Map<String, dynamic>) {
+          errorMessage = responseData['message'] ?? 'Failed to fetch patient list. Please try again.';
+        }
+        
+        // Handle unauthorized access
+        if (e.response!.statusCode == 401) {
+          return {
+            'success': false,
+            'message': 'Session expired. Please login again.',
+            'requiresAuth': true,
+          };
+        }
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage = 'Connection timeout. Please try again.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage = 'No internet connection. Please check your network.';
+      }
+
+      return {
+        'success': false,
+        'message': errorMessage,
+        'error': e.toString(),
+        'data': [],
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'An unexpected error occurred. Please try again.',
+        'error': e.toString(),
+        'data': [],
+      };
+    }
+  }
+
   static void addInterceptors() {
     _dio.interceptors.add(LogInterceptor(
       requestBody: true,

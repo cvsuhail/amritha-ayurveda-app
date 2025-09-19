@@ -67,6 +67,9 @@ class AuthProvider extends ChangeNotifier {
         // Store token securely
         final token = result['token'] as String;
         if (token.isNotEmpty) {
+          if (kDebugMode) {
+            print('AuthProvider: Saving token: ${token.substring(0, 20)}...');
+          }
           await StorageService.saveToken(token);
           _token = token;
         }
@@ -77,9 +80,18 @@ class AuthProvider extends ChangeNotifier {
           _userData = userData;
           // Store user data as JSON string
           await StorageService.saveUserData(userData.toString());
+          if (kDebugMode) {
+            print('AuthProvider: Saved user data: ${userData['user_details']?['name'] ?? 'unknown'}');
+          }
         }
         
         _setState(AuthState.authenticated);
+        
+        // Verify token was stored
+        final storedToken = await StorageService.getToken();
+        if (kDebugMode) {
+          print('AuthProvider: Verified stored token: ${storedToken?.substring(0, 20) ?? 'null'}...');
+        }
       } else {
         _setError(result['message'] ?? 'Login failed');
       }
